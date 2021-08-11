@@ -4,7 +4,6 @@ import torch
 import numpy as np
 import sys
 import os
-# import socnavData
 import pickle
 import torch.nn.functional as F
 
@@ -34,6 +33,7 @@ global g_device
 
 
 def collate(batch):
+
     graphs = [batch[0][0]]
     labels = batch[0][1]
     for graph, label in batch[1:]:
@@ -44,6 +44,19 @@ def collate(batch):
 
     return batched_graphs, labels
 
+def collate_list(batch):
+
+    graphs = [batch[0].graphs[0]]
+    labels = batch[0].labels[0]
+    for g in batch[1:]:
+        graphs.append(g.graphs[0])
+        labels = torch.cat([labels, g.labels[0]], dim=0)
+    batched_graphs = dgl.batch(graphs).to(torch.device(g_device))
+    labels.to(torch.device(g_device))
+
+    return batched_graphs, labels
+
+
 
 class SocNavAPI(object):
     def __init__(self, base=None, dataset=None, device='cpu'):
@@ -51,11 +64,9 @@ class SocNavAPI(object):
         global g_device
         g_device = self.device
         self.device2 = torch.device('cpu')
-        print(base)
-        self.params = pickle.load(open(sys.argv[1] + '/SOCNAV_V2.prms', 'rb'), fix_imports=True)
+        self.params = pickle.load(open(base + '/SOCNAV_V2.prms', 'rb'), fix_imports=True)
         self.params['net'] = self.params['net'].lower()
-        print(self.params)
-        print(self.params['net'])
+        # print(self.params)
         self.GNNmodel = SELECT_GNN(num_features=self.params['num_feats'],
                                    num_edge_feats=self.params['num_edge_feats'],
                                    n_classes=self.params['n_classes'],
@@ -64,18 +75,24 @@ class SocNavAPI(object):
                                    dropout=self.params['in_drop'],
                                    activation=self.params['nonlinearity'],
                                    final_activation=self.params['final_activation'],
+                                   num_channels=1,
                                    gnn_type=self.params['net'],
+                                   K=10,  # sage filters
                                    num_heads=self.params['heads'],
                                    num_rels=self.params['num_rels'],
                                    num_bases=self.params['num_bases'],
                                    g=None,
                                    residual=self.params['residual'],
                                    aggregator_type=self.params['aggregator_type'],
-                                   alpha=self.params['alpha'],
-                                   attn_drop=self.params['attn_drop']
+                                   attn_drop=self.params['attn_drop'],
+                                   num_hidden_layers_rgcn=self.params['gnn_layers'],
+                                   num_hidden_layers_gat=self.params['gnn_layers'],
+                                   num_hidden_layer_pairs=self.params['gnn_layers'],
+                                   alpha = self.params['alpha'],
+                                   grid_nodes = self.params['grid_nodes']
                                    )
 
-        self.GNNmodel.load_state_dict(torch.load(sys.argv[1] + '/SOCNAV_V2.tch', map_location=device))
+        self.GNNmodel.load_state_dict(torch.load(base + '/SOCNAV_V2.tch', map_location=device))
         self.GNNmodel.to(self.device)
         self.GNNmodel.eval()
 
@@ -84,12 +101,12 @@ class SocNavAPI(object):
 
     def predictOneGraph(self, g):
         self.test_dataloader = DataLoader(g, batch_size=1, collate_fn=collate)
-        logits = self.predict()
+        logits = self.predict()[0]
         return logits
 
     def predict(self, g=None):
         if g is not None:
-            self.test_dataloader = DataLoader(g, batch_size=1, collate_fn=collate)
+            self.test_dataloader = DataLoader(g, batch_size=len(g), collate_fn=collate_list)
 
         result = []
         for batch, data in enumerate(self.test_dataloader):
@@ -100,18 +117,28 @@ class SocNavAPI(object):
             else:
                 efeats = None
 
-            self.GNNmodel.gnn_object.g = subgraph
-            self.GNNmodel.g = subgraph
-            for layer in self.GNNmodel.gnn_object.layers:
-                layer.g = subgraph
-            if self.params['net'] in ['rgcn']:
-                logits = self.GNNmodel(feats.float(), subgraph.edata['rel_type'].squeeze().to(self.device), None)
-            elif self.params['net'] in ['mpnn']:
-                logits = self.GNNmodel(feats.float(), subgraph, efeats.float())
+            if self.params['fw'] == 'dgl':
+                self.GNNmodel.gnn_object.g = subgraph
+                self.GNNmodel.g = subgraph
+                for layer in self.GNNmodel.gnn_object.layers:
+                    layer.g = subgraph
+                if self.params['net'] in ['rgcn']:
+                    logits = self.GNNmodel(feats.float(), subgraph.edata['rel_type'].squeeze().to(self.device), None)
+                elif self.params['net'] in ['mpnn']:
+                    logits = self.GNNmodel(feats.float(), subgraph, efeats.float())
+                else:
+                    logits = self.GNNmodel(feats.float(), subgraph, None)
             else:
-                logits = self.GNNmodel(feats.float(), subgraph, None)
+                self.GNNmodel.g = subgraph
+                if self.params['net'] in ['pgat', 'pgcn', 'ptag', 'psage', 'pcheb']:
+                    dataI = Data(x=feats.float(), edge_index=torch.stack(subgraph.edges()).to(self.device))
+                else:
+                    dataI = Data(x=feats.float(), edge_index=torch.stack(subgraph.edges()).to(self.device),
+                                 edge_type=subgraph.edata['rel_type'].squeeze().to(self.device))
 
-            result.append(logits[0])
+                logits = self.GNNmodel(dataI, subgraph)
+
+            result.append(logits)
         return result
 
 class Human():
@@ -203,7 +230,7 @@ class SNScenario():
             link['src'] = int(interaction[1])
             link['relation'] = 'interaction'
             jsonmodel['interaction'].append(link)
-        jsonmodel['goal'] = [{'x': self.goal[0], 'y': self.goal[1]}]
+        jsonmodel['goal'] = [{'x' : self.goal[0], 'y' : self.goal[1]}]
         jsonmodel['command'] = self.command
         jsonmodel['label_Q1'] = 0
         jsonmodel['label_Q2'] = 0
