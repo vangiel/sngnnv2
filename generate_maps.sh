@@ -24,7 +24,7 @@ do
   COUNTER=$[$(cat $TEMPFILE) + 1]
   echo $COUNTER > $TEMPFILE
 
-  python3 showcase.py "best_model" "$f" 100
+  python3 showcase.py "best_model" "$f" 100 &
   cp "$f" images_dataset/
 
   if [ $COUNTER -eq 10 ]
