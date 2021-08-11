@@ -125,27 +125,21 @@ for scenario in scenario_list:
                 within_room = True
                 white_zone = True
                 last_frame_room = None
-                # cur_pose = data_sequence[-1]["robot_pose"]
-                cur_pose = {"a": 0.0, "x": 0.0, "y": 0.0}
+                cur_pose = data_sequence[-1]["robot_pose"]
                 xn = x
                 yn = y
                 for data_structure in reversed(data_sequence):
-                    # diff_angle = data_structure["robot_pose"]["a"] - cur_pose["a"]
-                    # diff_x = data_structure["robot_pose"]["x"] - cur_pose["x"]
-                    # diff_y = data_structure["robot_pose"]["y"] - cur_pose["y"]
-                    diff_angle = 0.0
-                    diff_x = 0.0
-                    diff_y = 0.0
+                    diff_angle = data_structure["robot_pose"]["a"] - cur_pose["a"]
+                    diff_x = data_structure["robot_pose"]["x"] - cur_pose["x"]
+                    diff_y = data_structure["robot_pose"]["y"] - cur_pose["y"]
                     Mr = get_transformation_matrix_for_pose(-diff_x, -diff_y, diff_angle)
                     POS = np.array(
                         [[xn + cur_pose["x"]], [yn + cur_pose["y"]], [1.0]], dtype=float
                     )
                     POS = Mr.dot(POS)
-                    # xn = POS[0][0] - data_structure["robot_pose"]["x"]
-                    # yn = POS[1][0] - data_structure["robot_pose"]["y"]
-                    xn = POS[0][0] - 0.0
-                    yn = POS[1][0] - 0.0
-                    cur_pose = {"a": 0.0, "x": 0.0, "y": 0.0}
+                    xn = POS[0][0] - data_structure["robot_pose"]["x"]
+                    yn = POS[1][0] - data_structure["robot_pose"]["y"]
+                    cur_pose = data_structure["robot_pose"]
                     sn = SNScenario(data_structure["timestamp"])
                     POS = np.array(
                         [

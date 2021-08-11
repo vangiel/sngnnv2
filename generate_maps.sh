@@ -13,9 +13,12 @@ then
   cd unlabelled_data/ && rm -rf SocNav2_unlabelled_data/ && cd ../
 fi
 
+mkdir -p unlabelled_data_robot/
+python3 add_robot_pose_to_dataset.py unlabelled_data unlabelled_data_robot
+
 TEMPFILE=/tmp/$$.tmp
 echo 0 > $TEMPFILE
-FILES="unlabelled_data/*.json"
+FILES="unlabelled_data_robot/*.json"
 mkdir -p images_dataset/
 
 for f in $FILES
