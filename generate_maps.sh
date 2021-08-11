@@ -16,6 +16,7 @@ fi
 TEMPFILE=/tmp/$$.tmp
 echo 0 > $TEMPFILE
 FILES="unlabelled_data/*.json"
+mkdir -p images_dataset/
 
 for f in $FILES
 do
