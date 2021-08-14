@@ -13,8 +13,11 @@ then
   cd unlabelled_data/ && rm -rf SocNav2_unlabelled_data/ && cd ../
 fi
 
-mkdir -p unlabelled_data_robot/
-python3 add_robot_pose_to_dataset.py unlabelled_data unlabelled_data_robot
+if [ ! -d "./unlabelled_data_robot" ]
+then
+  mkdir -p unlabelled_data_robot/
+  python3 add_robot_pose_to_dataset.py unlabelled_data unlabelled_data_robot
+fi
 
 TEMPFILE=/tmp/$$.tmp
 echo 0 > $TEMPFILE
@@ -27,8 +30,9 @@ do
   COUNTER=$[$(cat $TEMPFILE) + 1]
   echo $COUNTER > $TEMPFILE
 
-  python3 showcase.py "best_model" "$f" 100 &
+  python3 showcase.py "best_model" "$f" 5 &
   cp "$f" images_dataset/
+#  exit  0
 
   if [ $COUNTER -eq 10 ]
   then
