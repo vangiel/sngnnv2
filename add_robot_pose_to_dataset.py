@@ -4,6 +4,7 @@ import sys
 import math
 import numpy as np
 import copy
+from pathlib import Path
 
 
 def get_transformation_matrix_for_pose(x, z, angle):
@@ -46,6 +47,9 @@ if len(sys.argv) < 3:
 directory_path = sys.argv[1]
 dest_directory = sys.argv[2]
 
+Path(dest_directory).mkdir(parents=True, exist_ok=True)
+Path(dest_directory + '_absolute').mkdir(parents=True, exist_ok=True)
+
 if os.path.isfile(directory_path):
     filename = os.path.basename(directory_path)
     directory_path = directory_path.split(filename)[0]
@@ -65,7 +69,7 @@ for filename in fileList:
             datastore = json.load(f)
             f.close()
 
-    # datastore_absolute = copy.deepcopy(datastore)
+    datastore_absolute = copy.deepcopy(datastore)
     robot_pose = dict()
     for i, data in enumerate(datastore):
         x, y, a = compute_robot_pose(data['walls'])
@@ -73,33 +77,59 @@ for filename in fileList:
         robot_pose['y'] = y
         robot_pose['a'] = a
 
-        # M = get_transformation_matrix_for_pose(x, y, a)
+        M = get_transformation_matrix_for_pose(x, y, a)
 
         data['robot_pose'] = robot_pose
 
-    # for p in datastore_absolute[i]['people']:
-    # 	point = np.array([[p['x']], [p['y']], [1.0]], dtype=float)
-    # 	point = M.dot(point)
-    # 	p['x'] = point[0][0]
-    # 	p['y'] = point[1][0]
-    # 	p['a'] = math.atan2(math.sin(p['a']+a), math.cos(p['a']+a))
-    #
-    # for o in datastore_absolute[i]['objects']:
-    # 	point = np.array([[o['x']], [o['y']], [1.0]], dtype=float)
-    # 	point = M.dot(point)
-    # 	o['x'] = point[0][0]
-    # 	o['y'] = point[1][0]
-    # 	o['a'] = math.atan2(math.sin(o['a']+a), math.cos(o['a']+a))
+        for p in datastore_absolute[i]['people']:
+            point = np.array([[p['x']], [p['y']], [1.0]], dtype=float)
+            point = M.dot(point)
+            p['x'] = point[0][0]
+            p['y'] = point[1][0]
+            p['a'] = math.atan2(math.sin(p['a'] + a), math.cos(p['a'] + a))
 
-    # for i in range(len(datastore)-1):
-    # 	for j, p in enumerate(datastore[i]['people']):
-    # 		p['vx'] = datastore_absolute[i]['people'][j]['x'] - datastore_absolute[i+1]['people'][j]['x']
-    # 		p['vy'] = datastore_absolute[i]['people'][j]['y'] - datastore_absolute[i+1]['people'][j]['y']
-    #
-    # 	for j, o in enumerate(datastore[i]['objects']):
-    # 		o['vx'] = datastore_absolute[i]['objects'][j]['x'] - datastore_absolute[i+1]['objects'][j]['x']
-    # 		o['vy'] = datastore_absolute[i]['objects'][j]['y'] - datastore_absolute[i+1]['objects'][j]['y']
+        for o in datastore_absolute[i]['objects']:
+            point = np.array([[o['x']], [o['y']], [1.0]], dtype=float)
+            point = M.dot(point)
+            o['x'] = point[0][0]
+            o['y'] = point[1][0]
+            o['a'] = math.atan2(math.sin(o['a'] + a), math.cos(o['a'] + a))
+
+        for w in datastore_absolute[i]['walls']:
+            point1 = np.array([[w['x1']], [w['y1']], [1.0]], dtype=float)
+            point1 = M.dot(point1)
+            point2 = np.array([[w['x2']], [w['y2']], [1.0]], dtype=float)
+            point2 = M.dot(point2)
+            w['x1'] = point1[0][0]
+            w['y1'] = point1[1][0]
+            w['x2'] = point2[0][0]
+            w['y2'] = point2[1][0]
+
+    for i in range(len(datastore)):
+        for j, p in enumerate(datastore_absolute[i]['people']):
+            if j == 0:
+                p['vx'] = 0.0
+                p['vy'] = 0.0
+            elif j == len(datastore_absolute[i]['people']):
+                break
+            else:
+                p['vx'] = datastore_absolute[i]['people'][j]['x'] - datastore_absolute[i]['people'][j - 1]['x']
+                p['vy'] = datastore_absolute[i]['people'][j]['y'] - datastore_absolute[i]['people'][j - 1]['y']
+
+        for j, o in enumerate(datastore_absolute[i]['objects']):
+            if j == 0:
+                o['vx'] = 0.0
+                o['vy'] = 0.0
+            elif j == len(datastore_absolute[i]['objects']):
+                break
+            else:
+                o['vx'] = datastore_absolute[i]['objects'][j]['x'] - datastore_absolute[i]['objects'][j - 1]['x']
+                o['vy'] = datastore_absolute[i]['objects'][j]['y'] - datastore_absolute[i]['objects'][j - 1]['y']
 
     with open(dest_directory + '/' + save, 'w') as outfile:
         json.dump(datastore, outfile, indent=4, sort_keys=True)
+        outfile.close()
+
+    with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
+        json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
         outfile.close()
