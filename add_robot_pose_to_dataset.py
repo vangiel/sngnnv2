@@ -79,8 +79,14 @@ for filename in fileList:
 
         M = get_transformation_matrix_for_pose(x, y, a)
 
-        data['robot_pose'] = robot_pose
-        datastore_absolute[i]['robot_pose'] = robot_pose
+        data['robot_pose'] = copy.deepcopy(robot_pose)
+        datastore_absolute[i]['robot_pose'] = copy.deepcopy(robot_pose)
+
+        for g in datastore_absolute[i]['goal']:
+            point = np.array([[g['x']], [g['y']], [1.0]], dtype=float)
+            point = M.dot(point)
+            g['x'] = point[0][0]
+            g['y'] = point[1][0]
 
         for p in datastore_absolute[i]['people']:
             point = np.array([[p['x']], [p['y']], [1.0]], dtype=float)

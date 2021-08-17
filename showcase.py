@@ -105,6 +105,12 @@ for scenario in scenario_list:
     for tick in [1]:
         with open(scenario, "r") as f:
             data_sequence = json.loads(f.read())
+
+        for id in range(len(data_sequence)):
+            data_sequence[id]['robot_pose']['x'] = 0
+            data_sequence[id]['robot_pose']['y'] = 0
+            data_sequence[id]['robot_pose']['a'] = 0
+            data_sequence[id]['command'] = [0., 0., 0.]
         params["tick"] = tick
         num_str = str(tick).zfill(3)
         dst_str_a = base + fnamee + "_"
