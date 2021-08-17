@@ -21,7 +21,7 @@ fi
 
 TEMPFILE=/tmp/$$.tmp
 echo 0 > $TEMPFILE
-FILES="unlabelled_data_robot/*.json"
+FILES="unlabelled_data_robot_absolute/*.json"
 mkdir -p images_dataset/
 
 for f in $FILES

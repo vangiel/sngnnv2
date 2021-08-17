@@ -80,6 +80,7 @@ for filename in fileList:
         M = get_transformation_matrix_for_pose(x, y, a)
 
         data['robot_pose'] = robot_pose
+        datastore_absolute[i]['robot_pose'] = robot_pose
 
         for p in datastore_absolute[i]['people']:
             point = np.array([[p['x']], [p['y']], [1.0]], dtype=float)
