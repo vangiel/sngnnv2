@@ -114,28 +114,28 @@ for filename in fileList:
 
     for i in range(len(datastore)):
         for j, p in enumerate(datastore_absolute[i]['people']):
-            if j == 0:
+            if i == 0:
                 p['vx'] = 0.0
                 p['vy'] = 0.0
                 p['va'] = 0.0
-            elif j == len(datastore_absolute[i]['people']):
-                break
+            # elif j == len(datastore_absolute[i]['people']):
+            #     break
             else:
-                p['vx'] = datastore_absolute[i]['people'][j]['x'] - datastore_absolute[i]['people'][j - 1]['x']
-                p['vy'] = datastore_absolute[i]['people'][j]['y'] - datastore_absolute[i]['people'][j - 1]['y']
-                p['va'] = datastore_absolute[i]['people'][j]['a'] - datastore_absolute[i]['people'][j - 1]['a']
+                p['vx'] = datastore_absolute[i]['people'][j]['x'] - datastore_absolute[i-1]['people'][j]['x']
+                p['vy'] = datastore_absolute[i]['people'][j]['y'] - datastore_absolute[i-1]['people'][j]['y']
+                p['va'] = datastore_absolute[i]['people'][j]['a'] - datastore_absolute[i-1]['people'][j]['a']
 
         for j, o in enumerate(datastore_absolute[i]['objects']):
-            if j == 0:
+            if i == 0:
                 o['vx'] = 0.0
                 o['vy'] = 0.0
                 o['va'] = 0.0
-            elif j == len(datastore_absolute[i]['objects']):
-                break
+            # elif j == len(datastore_absolute[i]['objects']):
+            #     break
             else:
-                o['vx'] = datastore_absolute[i]['objects'][j]['x'] - datastore_absolute[i]['objects'][j - 1]['x']
-                o['vy'] = datastore_absolute[i]['objects'][j]['y'] - datastore_absolute[i]['objects'][j - 1]['y']
-                o['va'] = datastore_absolute[i]['objects'][j]['a'] - datastore_absolute[i]['objects'][j - 1]['a']
+                o['vx'] = datastore_absolute[i]['objects'][j]['x'] - datastore_absolute[i-1]['objects'][j]['x']
+                o['vy'] = datastore_absolute[i]['objects'][j]['y'] - datastore_absolute[i-1]['objects'][j]['y']
+                o['va'] = datastore_absolute[i]['objects'][j]['a'] - datastore_absolute[i-1]['objects'][j]['a']
 
     with open(dest_directory + '/' + save, 'w') as outfile:
         json.dump(datastore, outfile, indent=4, sort_keys=True)
