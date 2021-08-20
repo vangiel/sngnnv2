@@ -71,6 +71,9 @@ for filename in fileList:
 
     datastore_absolute = copy.deepcopy(datastore)
     robot_pose = dict()
+    x, y, a = compute_robot_pose(datastore[0]['walls'])
+    M = get_transformation_matrix_for_pose(x, y, a)
+    M0 = np.linalg.inv(M)
     for i, data in enumerate(datastore):
         x, y, a = compute_robot_pose(data['walls'])
         robot_pose['x'] = x
@@ -78,6 +81,7 @@ for filename in fileList:
         robot_pose['a'] = a
 
         M = get_transformation_matrix_for_pose(x, y, a)
+        M = np.dot(M0, M)
 
         data['robot_pose'] = copy.deepcopy(robot_pose)
         datastore_absolute[i]['robot_pose'] = copy.deepcopy(robot_pose)
