@@ -26,8 +26,8 @@ def compute_robot_pose(walls):
         l = math.sqrt(vw[0] * vw[0] + vw[1] * vw[1])
     else:
         w = walls[5]
-        w['x1'], w['x2'] = w['x2'], w['x1']
-        w['y1'], w['y2'] = w['y2'], w['y1']
+        # w['x1'], w['x2'] = w['x2'], w['x1']
+        # w['y1'], w['y2'] = w['y2'], w['y1']
         vw = (walls[3]['x2'] - walls[3]['x1'], walls[3]['y2'] - walls[3]['y1'])
         l = math.sqrt(vw[0] * vw[0] + vw[1] * vw[1])
 
@@ -68,6 +68,9 @@ for filename in fileList:
         with open(directory_path + '/' + filename, 'r') as f:
             datastore = json.load(f)
             f.close()
+
+    if len(datastore[0]['people'])!=len(datastore[-1]['people']) or len(datastore[0]['objects'])!=len(datastore[-1]['objects']):
+        continue
 
     datastore_absolute = copy.deepcopy(datastore)
     robot_pose = dict()

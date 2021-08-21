@@ -262,7 +262,7 @@ for scenario in scenario_list:
                         v_q1 = 255
                         # v_q2 = 255
                     else:
-                        v_q1 = 128
+                        v_q1 = 0
                         # v_q2 = 128
                 # print(v)
                 z_q1[y_i, x_i] = v_q1
@@ -270,48 +270,18 @@ for scenario in scenario_list:
 
         z_q1 = z_q1.astype(np.uint8)
         z_q1 = cv2.flip(z_q1, 0)
-        resized_q1 = cv2.resize(z_q1, (640, 640), interpolation=cv2.INTER_NEAREST)
-        resized_q1 = beautify_image(cv2.cvtColor(resized_q1, cv2.COLOR_GRAY2BGR))
-
-
-
-        # z_q2 = z_q2.astype(np.uint8)
-        # z_q2 = cv2.flip(z_q2, 0)
-        # resized_q2 = cv2.resize(z_q2, (640, 640), interpolation=cv2.INTER_NEAREST)
-        # resized_q2 = beautify_image(cv2.cvtColor(resized_q2, cv2.COLOR_GRAY2BGR))
-
-        # DRAW WALLS
-        for wall in data_sequence[-1]["walls"]:
-            x1_img = (wall["x1"] + l_img) * 640 / (2 * l_img)
-            y1_img = (-wall["y1"] + l_img) * 640 / (2 * l_img)
-            x2_img = (wall["x2"] + l_img) * 640 / (2 * l_img)
-            y2_img = (-wall["y2"] + l_img) * 640 / (2 * l_img)
-            thickness = 7
-            color = (0, 0, 0)
-            resized_q1 = cv2.line(
-                resized_q1,
-                (int(x1_img), int(y1_img)),
-                (int(x2_img), int(y2_img)),
-                color,
-                thickness,
-            )
-            # resized_q2 = cv2.line(
-            #     resized_q2,
-            #     (int(x1_img), int(y1_img)),
-            #     (int(x2_img), int(y2_img)),
-            #     color,
-            #     thickness,
-            # )
-
+        resized_q1 = z_q1
+        # resized_q1 = cv2.resize(z_q1, (640, 640), interpolation=cv2.INTER_NEAREST)
+        # resized_q1 = beautify_image(cv2.cvtColor(resized_q1, cv2.COLOR_GRAY2BGR))
 
         rows, cols = resized_q1.shape[0:2]
-        # Mr = cv2.getRotationMatrix2D((cols/2,rows/2),-data_sequence[-1]['robot_pose']['a']*180./math.pi,1)
-        Mr = cv2.getRotationMatrix2D((cols / 2, rows / 2), 0.0, 1)
-        final_img_q1 = cv2.warpAffine(resized_q1, Mr, (rows, cols),borderValue = (255, 255, 255))
-        # final_img_q2 = cv2.warpAffine(resized_q2, Mr, (rows, cols),borderValue = (255, 255, 255))
+        
+        # Mr = cv2.getRotationMatrix2D((cols / 2, rows / 2), 0.0, 1)
+        # final_img_q1 = cv2.warpAffine(resized_q1, Mr, (rows, cols),borderValue = (255, 255, 255))
 
-        cv2.imwrite(dst_str_a + dst_str_b_q1, final_img_q1)
-        # cv2.imwrite(dst_str_a + "clean" + dst_str_b_q2, final_img_q2)
+        cv2.imwrite(dst_str_a + dst_str_b_q1, resized_q1)
+        # cv2.imwrite(dst_str_a + dst_str_b_q1, final_img_q1)
+
 
         ##### Code for drawing the entities over the heat map: #################
 
