@@ -26,13 +26,20 @@ mkdir -p images_dataset/
 
 for f in $FILES
 do
-  echo "Processing $f"
-  COUNTER=$[$(cat $TEMPFILE) + 1]
-  echo $COUNTER > $TEMPFILE
+  for r in 100 150 200
+  do
+#    echo "Processing $f"
+    COUNTER=$[$(cat $TEMPFILE) + 1]
+    echo $COUNTER > $TEMPFILE
 
-  python3 showcase.py "best_model" "$f" 5 &
-  cp "$f" images_dataset/
-#  exit  0
+    start=$(date +%s)
+    python3 showcase.py "best_model" "$f" "$r"
+    end=$(date +%s)
+    runtime=$((end-start))
+    cp "$f" images_dataset/
+    echo "Time for resolution $r is $runtime seconds"
+  done
+exit  0
 
   if [ $COUNTER -eq 10 ]
   then
