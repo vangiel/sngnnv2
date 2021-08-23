@@ -63,7 +63,7 @@ class SocNavAPI(object):
         self.device = torch.device(device)  # For gpu change it to cuda
         global g_device
         g_device = self.device
-        self.device2 = torch.device('cpu')
+        self.device2 = torch.device('cuda')
         self.params = pickle.load(open(base + '/SOCNAV_V2.prms', 'rb'), fix_imports=True)
         self.params['net'] = self.params['net'].lower()
         # print(self.params)

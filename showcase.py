@@ -53,7 +53,7 @@ def radians_to_degrees(a):
     return angle
 
 
-sngnn = SocNavAPI(base=sys.argv[1], device="cpu")  # change to cpu when no gpu
+sngnn = SocNavAPI(base=sys.argv[1], device="cuda")  # change to cpu when no gpu
 
 
 def transform(world, params):
