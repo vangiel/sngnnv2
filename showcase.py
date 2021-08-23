@@ -117,7 +117,7 @@ for scenario in scenario_list:
         dst_str_b_q1 = "_Q1.png"
         dst_str_b_q2 = "_Q2.png"
 
-        # print("Processing frame", tick)
+        print("Processing frame", tick)
 
         z_q1 = np.zeros((bins, bins))
         z_q2 = np.zeros((bins, bins))
@@ -125,7 +125,7 @@ for scenario in scenario_list:
         ys = np.linspace(-l_img, l_img, bins)
         for x_i, x in enumerate(xs):
             if x_i % 5 == 0:
-                # print(x_i)
+                print(x_i)
                 pass
             for y_i, y in enumerate(ys):
                 sn_sequence = []

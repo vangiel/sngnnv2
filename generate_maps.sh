@@ -24,28 +24,26 @@ echo 0 > $TEMPFILE
 FILES="unlabelled_data_robot_absolute/*.json"
 mkdir -p images_dataset/
 
+start=$(date +%s)
 for f in $FILES
 do
-  for r in 100 150 200
-  do
-#    echo "Processing $f"
-    COUNTER=$[$(cat $TEMPFILE) + 1]
-    echo $COUNTER > $TEMPFILE
+  echo "Processing $f"
+  COUNTER=$[$(cat $TEMPFILE) + 1]
+  echo $COUNTER > $TEMPFILE
 
-    start=$(date +%s)
-    python3 showcase.py "best_model" "$f" "$r"
-    end=$(date +%s)
-    runtime=$((end-start))
-    cp "$f" images_dataset/
-    echo "Time for resolution $r is $runtime seconds"
-  done
-exit  0
+  python3 showcase.py "best_model" "$f" 150 &
+  cp "$f" images_dataset/
 
   if [ $COUNTER -eq 10 ]
   then
     echo 0 > $TEMPFILE
     wait
+    end=$(date +%s)
+    runtime=$((end-start))
+    echo "Time for 10 img in parallel is $runtime seconds"
+    exit 0
   fi
+
 done
 unlink $TEMPFILE
 
