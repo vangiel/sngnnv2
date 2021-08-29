@@ -126,6 +126,7 @@ for scenario in scenario_list:
         for x_i, x in enumerate(xs):
             if x_i % 5 == 0:
                 print(x_i)
+                pass
             for y_i, y in enumerate(ys):
                 sn_sequence = []
                 within_room = True
