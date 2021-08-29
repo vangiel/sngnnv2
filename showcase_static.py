@@ -69,6 +69,24 @@ def set_in_range(v, a, b):
         return a
     return v
 
+def extend_walls(walls, e):
+    new_walls = copy.deepcopy(walls)
+    if len(walls) == 4:
+        new_walls[0]['x1'] += e;  new_walls[0]['y1'] -= e;  new_walls[0]['x2'] += e;  new_walls[0]['y2'] += e
+        new_walls[1]['x1'] += e;  new_walls[1]['y1'] -= e;  new_walls[1]['x2'] -= e;  new_walls[1]['y2'] -= e
+        new_walls[2]['x1'] -= e;  new_walls[2]['y1'] -= e;  new_walls[2]['x2'] -= e;  new_walls[2]['y2'] += e
+        new_walls[3]['x1'] -= e;  new_walls[3]['y1'] += e;  new_walls[3]['x2'] += e;  new_walls[3]['y2'] += e
+    else:
+        new_walls[0]['x1'] -= e;  new_walls[0]['y1'] -= e;  new_walls[0]['x2'] -= e;  new_walls[0]['y2'] -= e
+        new_walls[1]['x1'] -= e;  new_walls[1]['y1'] -= e;  new_walls[1]['x2'] += e;  new_walls[1]['y2'] -= e
+        new_walls[2]['x1'] += e;  new_walls[2]['y1'] -= e;  new_walls[2]['x2'] += e;  new_walls[2]['y2'] -= e
+        new_walls[3]['x1'] += e;  new_walls[3]['y1'] -= e;  new_walls[3]['x2'] += e;  new_walls[3]['y2'] += e
+        new_walls[4]['x1'] += e;  new_walls[4]['y1'] += e;  new_walls[4]['x2'] -= e;  new_walls[4]['y2'] += e
+        new_walls[5]['x1'] -= e;  new_walls[5]['y1'] += e;  new_walls[5]['x2'] -= e;  new_walls[5]['y2'] += e
+        new_walls[6]['x1'] -= e;  new_walls[6]['y1'] += e;  new_walls[6]['x2'] -= e;  new_walls[6]['y2'] -= e
+        new_walls[7]['x1'] -= e;  new_walls[7]['y1'] -= e;  new_walls[7]['x2'] -= e;  new_walls[7]['y2'] -= e
+
+    return new_walls
 
 
 ###
@@ -111,6 +129,7 @@ for scenario in scenario_list:
             data_sequence[id]['robot_pose']['y'] = 0
             data_sequence[id]['robot_pose']['a'] = 0
             data_sequence[id]['command'] = [0., 0., 0.]
+            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 0.7)
         params["tick"] = tick
         num_str = str(tick).zfill(3)
         dst_str_a = base + fnamee + "_"
@@ -200,7 +219,28 @@ for scenario in scenario_list:
                         )
                     room_map = []
                     room_poly = []
-                    for wall in data_structure["walls"]:
+                    for wall, ext_wall in zip(data_structure["walls"], data_structure["extended_walls"]):
+                        new_ext_wall = {}
+                        point1 = [ext_wall["x1"], ext_wall["y1"]]
+                        POS1 = np.array(
+                            [[point1[0] * 10], [point1[1] * -10], [1.0]], dtype=float
+                        )  # WARNING THE INPUT VECTOR MUST BE IN PILAR BACHILLER'S FR SYSTEM!!!!
+                        POS1 = M.dot(POS1)
+                        POS1 /= 10
+                        POS1[1][0] *= -1
+                        point2 = [ext_wall["x2"], ext_wall["y2"]]
+                        POS2 = np.array(
+                            [[point2[0] * 10], [point2[1] * -10], [1.0]], dtype=float
+                        )  # WARNING THE INPUT VECTOR MUST BE IN PILAR BACHILLER'S FR SYSTEM!!!!
+                        POS2 = M.dot(POS2)
+                        POS2 /= 10
+                        POS2[1][0] *= -1
+
+                        new_ext_wall["x1"] = POS1[0][0] - xn
+                        new_ext_wall["y1"] = POS1[1][0] - yn
+                        new_ext_wall["x2"] = POS2[0][0] - xn
+                        new_ext_wall["y2"] = POS2[1][0] - yn
+
                         new_wall = {}
                         point1 = [wall["x1"], wall["y1"]]
                         POS1 = np.array(
@@ -225,7 +265,7 @@ for scenario in scenario_list:
                         room_poly.append((new_wall["x1"], new_wall["y1"]))
                         room_poly.append((new_wall["x2"], new_wall["y2"]))
 
-                        room_map.append(new_wall)
+                        room_map.append(new_ext_wall)
                     sn.add_room(room_map)
                     if last_frame_room is None:
                         last_frame_room = room_poly
