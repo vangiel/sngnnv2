@@ -69,23 +69,59 @@ def set_in_range(v, a, b):
         return a
     return v
 
-def extend_walls(walls, e):
+def extend_walls(walls, e, ang):
     new_walls = copy.deepcopy(walls)
     if len(walls) == 4:
-        new_walls[0]['x1'] += e;  new_walls[0]['y1'] -= e;  new_walls[0]['x2'] += e;  new_walls[0]['y2'] += e
-        new_walls[1]['x1'] += e;  new_walls[1]['y1'] -= e;  new_walls[1]['x2'] -= e;  new_walls[1]['y2'] -= e
-        new_walls[2]['x1'] -= e;  new_walls[2]['y1'] -= e;  new_walls[2]['x2'] -= e;  new_walls[2]['y2'] += e
-        new_walls[3]['x1'] -= e;  new_walls[3]['y1'] += e;  new_walls[3]['x2'] += e;  new_walls[3]['y2'] += e
+        p1_r = (e, e);  p2_r = (e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[0]['x1'] += p1[0];  new_walls[0]['y1'] += p1[1];  new_walls[0]['x2'] += p2[0];  new_walls[0]['y2'] += p2[1]
+        p1_r = (e, -e);  p2_r = (-e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[1]['x1'] += p1[0];  new_walls[1]['y1'] += p1[1];  new_walls[1]['x2'] += p2[0];  new_walls[1]['y2'] += p2[1]
+        p1_r = (-e, -e);  p2_r = (-e, e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[2]['x1'] += p1[0];  new_walls[2]['y1'] += p1[1];  new_walls[2]['x2'] += p2[0];  new_walls[2]['y2'] += p2[1]
+        p1_r = (-e, e);  p2_r = (e, e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[3]['x1'] += p1[0];  new_walls[3]['y1'] += p1[1];  new_walls[3]['x2'] += p2[0];  new_walls[3]['y2'] += p2[1]
     else:
-        new_walls[0]['x1'] -= e;  new_walls[0]['y1'] -= e;  new_walls[0]['x2'] -= e;  new_walls[0]['y2'] -= e
-        new_walls[1]['x1'] -= e;  new_walls[1]['y1'] -= e;  new_walls[1]['x2'] += e;  new_walls[1]['y2'] -= e
-        new_walls[2]['x1'] += e;  new_walls[2]['y1'] -= e;  new_walls[2]['x2'] += e;  new_walls[2]['y2'] -= e
-        new_walls[3]['x1'] += e;  new_walls[3]['y1'] -= e;  new_walls[3]['x2'] += e;  new_walls[3]['y2'] += e
-        new_walls[4]['x1'] += e;  new_walls[4]['y1'] += e;  new_walls[4]['x2'] -= e;  new_walls[4]['y2'] += e
-        new_walls[5]['x1'] -= e;  new_walls[5]['y1'] += e;  new_walls[5]['x2'] -= e;  new_walls[5]['y2'] += e
-        new_walls[6]['x1'] -= e;  new_walls[6]['y1'] += e;  new_walls[6]['x2'] -= e;  new_walls[6]['y2'] -= e
-        new_walls[7]['x1'] -= e;  new_walls[7]['y1'] -= e;  new_walls[7]['x2'] -= e;  new_walls[7]['y2'] -= e
-
+        p1_r = (-e, -e);  p2_r = (-e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[0]['x1'] += p1[0];  new_walls[0]['y1'] += p1[1];  new_walls[0]['x2'] += p2[0];  new_walls[0]['y2'] += p2[1]
+        p1_r = (-e, -e);  p2_r = (e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[1]['x1'] += p1[0];  new_walls[1]['y1'] += p1[1];  new_walls[1]['x2'] += p2[0];  new_walls[1]['y2'] += p2[1]
+        p1_r = (e, -e);  p2_r = (e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[2]['x1'] += p1[0];  new_walls[2]['y1'] += p1[1];  new_walls[2]['x2'] += p2[0];  new_walls[2]['y2'] += p2[1]
+        p1_r = (e, -e);  p2_r = (e, e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[3]['x1'] += p1[0];  new_walls[3]['y1'] += p1[1];  new_walls[3]['x2'] += p2[0];  new_walls[3]['y2'] += p2[1]
+        p1_r = (e, e);  p2_r = (-e, e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[4]['x1'] += p1[0];  new_walls[4]['y1'] += p1[1];  new_walls[4]['x2'] += p2[0];  new_walls[4]['y2'] += p2[1]
+        p1_r = (-e, e);  p2_r = (-e, e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[5]['x1'] += p1[0];  new_walls[5]['y1'] += p1[1];  new_walls[5]['x2'] += p2[0];  new_walls[5]['y2'] += p2[1]
+        p1_r = (-e, e);  p2_r = (-e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[6]['x1'] += p1[0];  new_walls[6]['y1'] += p1[1];  new_walls[6]['x2'] += p2[0];  new_walls[6]['y2'] += p2[1]
+        p1_r = (-e, -e);  p2_r = (-e, -e)
+        p1 = (p1_r[0]*math.cos(ang) + p1_r[1]*math.sin(ang), -p1_r[0]*math.sin(ang) + p1_r[1]*math.cos(ang))
+        p2 = (p2_r[0]*math.cos(ang) + p2_r[1]*math.sin(ang), -p2_r[0]*math.sin(ang) + p2_r[1]*math.cos(ang))
+        new_walls[7]['x1'] += p1[0];  new_walls[7]['y1'] += p1[1];  new_walls[7]['x2'] += p2[0];  new_walls[7]['y2'] += p2[1]
+        
     return new_walls
 
 
@@ -125,11 +161,8 @@ for scenario in scenario_list:
             data_sequence = json.loads(f.read())
 
         for id in range(len(data_sequence)):
-            data_sequence[id]['robot_pose']['x'] = 0
-            data_sequence[id]['robot_pose']['y'] = 0
-            data_sequence[id]['robot_pose']['a'] = 0
             data_sequence[id]['command'] = [0., 0., 0.]
-            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 0.7)
+            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 0.7, -data_sequence[id]['robot_pose']['a'])
         params["tick"] = tick
         num_str = str(tick).zfill(3)
         dst_str_a = base + fnamee + "_"
