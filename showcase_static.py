@@ -22,7 +22,7 @@ from beautify import *
 from shapely.geometry import Point, Polygon
 
 if len(sys.argv) < 2 or len(sys.argv) > 4:
-    print("Please use this format: 'python3 showcase.py 'model_directory' 'file.json' resolution'")
+    print("Please use this format: 'python3 showcase_static.py 'model_directory' 'file.json' resolution'")
     sys.exit(0)
 
 # scenario_list = ["jsons_test/scenario1/S1_000000.json", "jsons_test/scenario1/S1_000004.json", "jsons_test/scenario2/S2_000000.json",
@@ -162,7 +162,7 @@ for scenario in scenario_list:
 
         for id in range(len(data_sequence)):
             data_sequence[id]['command'] = [0., 0., 0.]
-            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 1.5, -data_sequence[id]['robot_pose']['a'])
+            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 1., -data_sequence[id]['robot_pose']['a'])
         params["tick"] = tick
         num_str = str(tick).zfill(3)
         dst_str_a = base + fnamee + "_"
