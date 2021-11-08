@@ -162,7 +162,7 @@ for scenario in scenario_list:
 
         for id in range(len(data_sequence)):
             data_sequence[id]['command'] = [0., 0., 0.]
-            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 1., -data_sequence[id]['robot_pose']['a'])
+            data_sequence[id]['extended_walls'] = extend_walls(data_sequence[id]['walls'], 1.5, -data_sequence[id]['robot_pose']['a'])
         params["tick"] = tick
         num_str = str(tick).zfill(3)
         dst_str_a = base + fnamee + "_"
@@ -186,7 +186,7 @@ for scenario in scenario_list:
                 cur_pose = data_sequence[-1]["robot_pose"]
                 xn = x
                 yn = y
-                for data_structure in (data_sequence):
+                for data_structure in reversed(data_sequence):
                     diff_angle = data_structure["robot_pose"]["a"] - cur_pose["a"]
                     diff_x = data_structure["robot_pose"]["x"] - cur_pose["x"]
                     diff_y = data_structure["robot_pose"]["y"] - cur_pose["y"]
