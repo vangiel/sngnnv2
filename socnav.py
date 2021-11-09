@@ -26,6 +26,7 @@ limit = 50000  # Limit of graphs to load
 path_saves = 'saves/'  # This variable is necessary due to a bug in dgl.DGLDataset source code
 graphData = namedtuple('graphData', ['src_nodes', 'dst_nodes', 'n_nodes', 'features', 'edge_feats', 'edge_types',
                                      'edge_norms', 'position_by_id', 'typeMap', 'labels', 'w_segments'])
+Wall = namedtuple('Wall', ['orientation', 'xpos', 'ypos'])
 
 
 #  human to wall distance
@@ -41,12 +42,14 @@ def dist_h_w(h, wall):
     wypos = float(wall.ypos) / 100.
     return math.sqrt((hxpos - wxpos) * (hxpos - wxpos) + (hypos - wypos) * (hypos - wypos))
 
+
 # return de number of grid nodes if a grid is used in the specified alternative
 def grid_nodes_number(alt):
     if alt=='2' or alt=='7' or alt=='8':
         return grid_width*grid_width
     else:
         return 0
+
 
 def central_grid_nodes(alt, r):
     if alt == '7' or alt == '8':
@@ -58,6 +61,7 @@ def central_grid_nodes(alt, r):
         return central_nodes
     else:
         return []
+
 
 # Calculate the closet node in the grid to a given node by its coordinates
 def closest_grid_node(grid_ids, w_a, w_i, x, y):
@@ -335,13 +339,8 @@ def get_features(alt):
     return all_features, feature_dimensions
 
 
-#################################################################
-# Different initialize alternatives:
-#################################################################
-
 # Generate data for a grid of nodes
-
-def generate_grid_graph_data(alt = '2'):
+def generate_grid_graph_data(alt='2'):
     # Define variables for edge types and relations
     grid_rels, num_rels = get_relations(alt)
     edge_types = []  # List to store the relation of each edge
@@ -484,7 +483,264 @@ def generate_grid_graph_data(alt = '2'):
            node_ids, []
 
 
-# So far there two different alternatives, the second one includes the grid
+def generate_walls_information(data, w_segments):
+    # Compute data for walls
+    walls = []
+    i_w = 0
+    for wall_segment in data['walls']:
+        p1 = np.array([wall_segment["x1"], wall_segment["y1"]]) * 100
+        p2 = np.array([wall_segment["x2"], wall_segment["y2"]]) * 100
+        dist = np.linalg.norm(p1 - p2)
+        if i_w >= len(w_segments):
+            iters = int(dist / 249) + 1
+            w_segments.append(iters)
+        if w_segments[i_w] > 1:  # WE NEED TO CHECK THIS PART
+            v = (p2 - p1) / w_segments[i_w]
+            for i in range(w_segments[i_w]):
+                pa = p1 + v * i
+                pb = p1 + v * (i + 1)
+                inc2 = pb - pa
+                midsp = (pa + pb) / 2
+                walls.append(Wall(math.atan2(inc2[0], inc2[1]), midsp[0], midsp[1]))
+        else:
+            inc = p2 - p1
+            midp = (p2 + p1) / 2
+            walls.append(Wall(math.atan2(inc[0], inc[1]), midp[0], midp[1]))
+        i_w += 1
+    return walls,  w_segments
+
+
+def update_node_features(graphs, w_segments, data, ini_node, final_node, ini_edge, final_edge):
+    # features should be updated in graphs.ndata['h']
+    # w_segments is a list with the number of nodes uses to represent each wall
+    # data is the json data for the current instant
+    # ini_node is the index of the initial node to be updated
+    # final_node is the index of the final node (not included) to be updated
+
+    # Initialize variables
+    # rels, num_rels = get_relations('3')
+    # # print(num_rels)
+    # edge_types = []  # List to store the relation of each edge
+    # edge_norms = []  # List to store the norm of each edge
+    max_used_id = 0  # Initialise id counter (0 for the robot)
+
+    # Compute data for walls
+    Wall = namedtuple('Wall', ['orientation', 'xpos', 'ypos'])
+    walls = []
+    i_w = 0
+    for wall_segment in data['walls']:
+        p1 = np.array([wall_segment["x1"], wall_segment["y1"]]) * 100
+        p2 = np.array([wall_segment["x2"], wall_segment["y2"]]) * 100
+        dist = np.linalg.norm(p1 - p2)
+        v = (p2 - p1) / w_segments[i_w]
+        for i in range(w_segments[i_w]):
+            pa = p1 + v * i
+            pb = p1 + v * (i + 1)
+            inc2 = pb - pa
+            midsp = (pa + pb) / 2
+            walls.append(Wall(math.atan2(inc2[0], inc2[1]), midsp[0], midsp[1]))
+        i_w += 1
+
+    # Compute the number of nodes
+    # one for the robot + room walls   + humans    + objects              + room(global node)
+    # n_nodes = 1 + len(walls) + len(data['people']) + len(data['objects']) + 1
+
+    # Feature dimensions
+    all_features, n_features = get_features('3')
+    ##features = th.zeros(n_nodes, n_features)
+    # edge_feats_list = []
+
+    # Nodes variables
+    # typeMap = dict()
+    # position_by_id = {}
+
+    labels = data['command']
+    labels[0] = labels[0] / 100.
+    labels[1] = labels[1] / 100.
+
+    # room (id 0)
+    room_id = 0
+    # typeMap[room_id] = 'r'  # 'r' for 'room'
+    # position_by_id[room_id] = [0, 0]
+    # graphs.ndata['h'][ini_node+room_id, all_features.index('room_humans')] = len(data['people']) / MAX_HUMANS
+    # graphs.ndata['h'][ini_node+room_id, all_features.index('room_humans2')] = (len(data['people']) ** 2) / (MAX_HUMANS ** 2)
+    graphs.ndata['h'][ini_node+room_id, all_features.index('robot_adv_vel')] = data['command'][0] / MAX_ADV
+    graphs.ndata['h'][ini_node+room_id, all_features.index('robot_rot_vel')] = data['command'][2] / MAX_ROT
+    max_used_id += 1
+
+    # humans
+    for h in data['people']:
+        # typeMap[h['id']] = 'p'  # 'p' for 'person'
+        max_used_id += 1
+        xpos = h['x'] / 10.
+        ypos = h['y'] / 10.
+        # position_by_id[h['id']] = [xpos, ypos]
+        dist = math.sqrt(xpos ** 2 + ypos ** 2)
+        va = h['va'] / 10.
+        vx = h['vx'] / 10.
+        vy = h['vy'] / 10.
+
+        orientation = h['a']
+
+        # print(str(math.degrees(angle)) + ' ' + str(math.degrees(orientation)) + ' ' + str(math.degrees(angle_hum)))
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_orientation_sin')] = math.sin(orientation)
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_orientation_cos')] = math.cos(orientation)
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_x_pos')] = xpos
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_y_pos')] = ypos
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('human_a_vel')] = va
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('human_x_vel')] = vx
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('human_y_vel')] = vy
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_dist')] = dist
+        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_inv_dist')] = 1. - dist  # /(1.+dist*10.)
+
+        # # Edge features
+        # edge_features = th.zeros(num_rels + 4)
+        # edge_features[rels.index('p_r')] = 1
+        # edge_features[-1] = dist
+        # edge_feats_list.append(edge_features)
+
+        # edge_features = th.zeros(num_rels + 4)
+        # edge_features[rels.index('r_p')] = 1
+        # edge_features[-1] = dist
+        # edge_feats_list.append(edge_features)
+    # objects
+    for o in data['objects']:
+        # typeMap[o['id']] = 'o'  # 'o' for 'object'
+        max_used_id += 1
+        xpos = o['x'] / 10.
+        ypos = o['y'] / 10.
+        # position_by_id[o['id']] = [xpos, ypos]
+        dist = math.sqrt(xpos ** 2 + ypos ** 2)
+        va = o['va'] / 10.
+        vx = o['vx'] / 10.
+        vy = o['vy'] / 10.
+
+        orientation = o['a']
+
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_orientation_sin')] = math.sin(orientation)
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_orientation_cos')] = math.cos(orientation)
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_x_pos')] = xpos
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_y_pos')] = ypos
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_a_vel')] = va
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_x_vel')] = vx
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_y_vel')] = vy
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_x_size')] = o['size_x']
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_y_size')] = o['size_y']
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_dist')] = dist
+        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_inv_dist')] = 1. - dist  # /(1.+dist*10.)
+
+        # # Edge features
+        # edge_features = th.zeros(num_rels + 4)
+        # edge_features[rels.index('o_r')] = 1
+        # edge_features[-1] = dist
+        # edge_feats_list.append(edge_features)
+
+        # edge_features = th.zeros(num_rels + 4)
+        # edge_features[rels.index('r_o')] = 1
+        # edge_features[-1] = dist
+        # edge_feats_list.append(edge_features)
+
+    # Goal
+    goal_id = max_used_id
+    # typeMap[goal_id] = 'g'  # 'g' for 'goal'
+
+    xpos = data['goal'][0]['x'] / 10.
+    ypos = data['goal'][0]['y'] / 10.
+    # position_by_id[goal_id] = [xpos, ypos]
+    dist = math.sqrt(xpos ** 2 + ypos ** 2)
+    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_x_pos')] = xpos
+    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_y_pos')] = ypos
+    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_dist')] = dist
+    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_inv_dist')] = 1. - dist  # /(1.+dist*10.)
+
+    max_used_id += 1
+
+    # # Edge features
+    # edge_features = th.zeros(num_rels + 4)
+    # edge_features[rels.index('g_r')] = 1
+    # edge_features[-1] = dist
+    # edge_feats_list.append(edge_features)
+
+    # edge_features = th.zeros(num_rels + 4)
+    # edge_features[rels.index('r_g')] = 1
+    # edge_features[-1] = dist
+    # edge_feats_list.append(edge_features)
+
+    # walls
+    wids = dict()
+    for w_i, wall in enumerate(walls, 0):
+        wall_id = max_used_id
+        wids[wall] = wall_id
+        # typeMap[wall_id] = 'w'  # 'w' for 'walls'
+        max_used_id += 1
+
+        dist = math.sqrt((wall.xpos / 1000.) ** 2 + (wall.ypos / 1000.) ** 2)
+
+        # # Edge features
+        # edge_features = th.zeros(num_rels + 4)
+        # edge_features[rels.index('w_r')] = 1
+        # edge_features[-1] = dist
+        # edge_feats_list.append(edge_features)
+
+        # edge_features = th.zeros(num_rels + 4)
+        # edge_features[rels.index('r_w')] = 1
+        # edge_features[-1] = dist
+        # edge_feats_list.append(edge_features)
+
+
+        # position_by_id[wall_id] = [wall.xpos / 100., wall.ypos / 100.]
+
+        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_orientation_sin')] = math.sin(wall.orientation)
+        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_orientation_cos')] = math.cos(wall.orientation)
+        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_x_pos')] = wall.xpos / 1000.
+        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_y_pos')] = wall.ypos / 1000.
+        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_dist')] = dist
+        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_inv_dist')] = 1. - dist  # 1./(1.+dist*10.)
+
+
+    # interaction links
+    # for link in data['interaction']:
+    #     typeLdir = typeMap[link['src']] + '_' + typeMap[link['dst']]
+    #     typeLinv = typeMap[link['dst']] + '_' + typeMap[link['src']]
+
+    #     dist = math.sqrt((position_by_id[link['src']][0] - position_by_id[link['dst']][0]) ** 2 +
+    #                      (position_by_id[link['src']][1] - position_by_id[link['dst']][1]) ** 2)
+
+    #     # Edge features
+    #     edge_features = th.zeros(num_rels + 4)
+    #     edge_features[rels.index(typeLdir)] = 1
+    #     edge_features[-1] = dist
+    #     edge_feats_list.append(edge_features)
+
+    #     edge_features = th.zeros(num_rels + 4)
+    #     edge_features[rels.index(typeLinv)] = 1
+    #     edge_features[-1] = dist
+    #     edge_feats_list.append(edge_features)
+
+
+    # # self edges
+    # for node_id in range(n_nodes):
+
+    #     # Edge features
+    #     edge_features = th.zeros(num_rels + 4)
+    #     edge_features[rels.index('self')] = 1
+    #     edge_features[-1] = 0
+    #     edge_feats_list.append(edge_features)
+
+    # # Convert outputs to tensors
+    # edge_feats = th.stack(edge_feats_list)
+
+    # graphs.edata['he'][ini_edge:final_edge:,] = edge_feats
+
+
+#################################################################
+# Different initialize alternatives:
+#################################################################
+
+MAX_ADV = 3.5
+MAX_ROT = 4.
+MAX_HUMANS = 15
+
 def initializeAlt1(data):
     # Initialize variables
     rels, num_rels = get_relations('1')
@@ -729,7 +985,6 @@ def initializeAlt1(data):
 
     return src_nodes, dst_nodes, n_nodes, features, None, edge_types, edge_norms, position_by_id, typeMap, labels, []
 
-
 def initializeAlt2(data):
     # Define variables for edge types and relations
     rels, _ = get_relations('2')
@@ -899,12 +1154,6 @@ def initializeAlt2(data):
     edge_norms = th.Tensor(edge_norms)
 
     return src_nodes, dst_nodes, n_nodes, features, None, edge_types, edge_norms, position_by_id, typeMap, labels, []
-
-
-MAX_ADV = 3.5
-MAX_ROT = 4.
-MAX_HUMANS = 15
-
 
 def initializeAlt3(data, w_segments=[]):
     # Initialize variables
@@ -1594,33 +1843,6 @@ def initializeAlt5(data, w_segments=[]):
     return src_nodes, dst_nodes, n_nodes, features, edge_feats, edge_types, edge_norms, position_by_id, typeMap, \
            labels, []
 
-Wall = namedtuple('Wall', ['orientation', 'xpos', 'ypos'])
-def generate_walls_information(data, w_segments):
-    # Compute data for walls
-    walls = []
-    i_w = 0
-    for wall_segment in data['walls']:
-        p1 = np.array([wall_segment["x1"], wall_segment["y1"]]) * 100
-        p2 = np.array([wall_segment["x2"], wall_segment["y2"]]) * 100
-        dist = np.linalg.norm(p1 - p2)
-        if i_w >= len(w_segments):
-            iters = int(dist / 249) + 1
-            w_segments.append(iters)
-        if w_segments[i_w] > 1:  # WE NEED TO CHECK THIS PART
-            v = (p2 - p1) / w_segments[i_w]
-            for i in range(w_segments[i_w]):
-                pa = p1 + v * i
-                pb = p1 + v * (i + 1)
-                inc2 = pb - pa
-                midsp = (pa + pb) / 2
-                walls.append(Wall(math.atan2(inc2[0], inc2[1]), midsp[0], midsp[1]))
-        else:
-            inc = p2 - p1
-            midp = (p2 + p1) / 2
-            walls.append(Wall(math.atan2(inc[0], inc[1]), midp[0], midp[1]))
-        i_w += 1
-    return walls,  w_segments
-
 # Initialize alternatives 6 and 7: 
 # 6: people, goal and time features
 # 7: people, walls, goal and time features. Can be combined with the grid
@@ -1995,8 +2217,6 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             features[o_id, all_features.index('obj_dist'+t_tag[n_instants])] = dist
             features[o_id, all_features.index('obj_inv_dist'+t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
 
-
-
         # humans
         for h in data['people']:
             h_id = h['id']
@@ -2050,7 +2270,6 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             features[h_id, all_features.index('hum_dist'+t_tag[n_instants])] = dist
             features[h_id, all_features.index('hum_inv_dist'+t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
             features[h_id, all_features.index('t'+str(n_instants))] = 1.
-
 
         # Goal
         goal_id = max_used_id
@@ -2199,231 +2418,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
     return src_nodes, dst_nodes, n_nodes, features, edge_feats, edge_types, edge_norms, position_by_id, typeMap, \
            labels, []
-
-def update_node_features(graphs, w_segments, data, ini_node, final_node, ini_edge, final_edge):
-    # features should be updated in graphs.ndata['h']
-    # w_segments is a list with the number of nodes uses to represent each wall
-    # data is the json data for the current instant
-    # ini_node is the index of the initial node to be updated
-    # final_node is the index of the final node (not included) to be updated
-
-    # Initialize variables
-    # rels, num_rels = get_relations('3')
-    # # print(num_rels)
-    # edge_types = []  # List to store the relation of each edge
-    # edge_norms = []  # List to store the norm of each edge
-    max_used_id = 0  # Initialise id counter (0 for the robot)
-
-    # Compute data for walls
-    Wall = namedtuple('Wall', ['orientation', 'xpos', 'ypos'])
-    walls = []
-    i_w = 0
-    for wall_segment in data['walls']:
-        p1 = np.array([wall_segment["x1"], wall_segment["y1"]]) * 100
-        p2 = np.array([wall_segment["x2"], wall_segment["y2"]]) * 100
-        dist = np.linalg.norm(p1 - p2)
-        v = (p2 - p1) / w_segments[i_w]
-        for i in range(w_segments[i_w]):
-            pa = p1 + v * i
-            pb = p1 + v * (i + 1)
-            inc2 = pb - pa
-            midsp = (pa + pb) / 2
-            walls.append(Wall(math.atan2(inc2[0], inc2[1]), midsp[0], midsp[1]))
-        i_w += 1
-
-    # Compute the number of nodes
-    # one for the robot + room walls   + humans    + objects              + room(global node)
-    # n_nodes = 1 + len(walls) + len(data['people']) + len(data['objects']) + 1
-
-    # Feature dimensions
-    all_features, n_features = get_features('3')
-    ##features = th.zeros(n_nodes, n_features)
-    # edge_feats_list = []
-
-    # Nodes variables
-    # typeMap = dict()
-    # position_by_id = {}
-
-    labels = data['command']
-    labels[0] = labels[0] / 100.
-    labels[1] = labels[1] / 100.
-
-    # room (id 0)
-    room_id = 0
-    # typeMap[room_id] = 'r'  # 'r' for 'room'
-    # position_by_id[room_id] = [0, 0]
-    # graphs.ndata['h'][ini_node+room_id, all_features.index('room_humans')] = len(data['people']) / MAX_HUMANS
-    # graphs.ndata['h'][ini_node+room_id, all_features.index('room_humans2')] = (len(data['people']) ** 2) / (MAX_HUMANS ** 2)
-    graphs.ndata['h'][ini_node+room_id, all_features.index('robot_adv_vel')] = data['command'][0] / MAX_ADV
-    graphs.ndata['h'][ini_node+room_id, all_features.index('robot_rot_vel')] = data['command'][2] / MAX_ROT
-    max_used_id += 1
-
-    # humans
-    for h in data['people']:
-        # typeMap[h['id']] = 'p'  # 'p' for 'person'
-        max_used_id += 1
-        xpos = h['x'] / 10.
-        ypos = h['y'] / 10.
-        # position_by_id[h['id']] = [xpos, ypos]
-        dist = math.sqrt(xpos ** 2 + ypos ** 2)
-        va = h['va'] / 10.
-        vx = h['vx'] / 10.
-        vy = h['vy'] / 10.
-
-        orientation = h['a']
-
-        # print(str(math.degrees(angle)) + ' ' + str(math.degrees(orientation)) + ' ' + str(math.degrees(angle_hum)))
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_orientation_sin')] = math.sin(orientation)
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_orientation_cos')] = math.cos(orientation)
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_x_pos')] = xpos
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_y_pos')] = ypos
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('human_a_vel')] = va
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('human_x_vel')] = vx
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('human_y_vel')] = vy
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_dist')] = dist
-        graphs.ndata['h'][ini_node+h['id'], all_features.index('hum_inv_dist')] = 1. - dist  # /(1.+dist*10.)
-
-        # # Edge features
-        # edge_features = th.zeros(num_rels + 4)
-        # edge_features[rels.index('p_r')] = 1
-        # edge_features[-1] = dist
-        # edge_feats_list.append(edge_features)
-
-        # edge_features = th.zeros(num_rels + 4)
-        # edge_features[rels.index('r_p')] = 1
-        # edge_features[-1] = dist
-        # edge_feats_list.append(edge_features)
-    # objects
-    for o in data['objects']:
-        # typeMap[o['id']] = 'o'  # 'o' for 'object'
-        max_used_id += 1
-        xpos = o['x'] / 10.
-        ypos = o['y'] / 10.
-        # position_by_id[o['id']] = [xpos, ypos]
-        dist = math.sqrt(xpos ** 2 + ypos ** 2)
-        va = o['va'] / 10.
-        vx = o['vx'] / 10.
-        vy = o['vy'] / 10.
-
-        orientation = o['a']
-
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_orientation_sin')] = math.sin(orientation)
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_orientation_cos')] = math.cos(orientation)
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_x_pos')] = xpos
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_y_pos')] = ypos
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_a_vel')] = va
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_x_vel')] = vx
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_y_vel')] = vy
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_x_size')] = o['size_x']
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_y_size')] = o['size_y']
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_dist')] = dist
-        graphs.ndata['h'][ini_node+o['id'], all_features.index('obj_inv_dist')] = 1. - dist  # /(1.+dist*10.)
-
-        # # Edge features
-        # edge_features = th.zeros(num_rels + 4)
-        # edge_features[rels.index('o_r')] = 1
-        # edge_features[-1] = dist
-        # edge_feats_list.append(edge_features)
-
-        # edge_features = th.zeros(num_rels + 4)
-        # edge_features[rels.index('r_o')] = 1
-        # edge_features[-1] = dist
-        # edge_feats_list.append(edge_features)
-
-    # Goal
-    goal_id = max_used_id
-    # typeMap[goal_id] = 'g'  # 'g' for 'goal'
-
-    xpos = data['goal'][0]['x'] / 10.
-    ypos = data['goal'][0]['y'] / 10.
-    # position_by_id[goal_id] = [xpos, ypos]
-    dist = math.sqrt(xpos ** 2 + ypos ** 2)
-    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_x_pos')] = xpos
-    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_y_pos')] = ypos
-    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_dist')] = dist
-    graphs.ndata['h'][ini_node+goal_id, all_features.index('goal_inv_dist')] = 1. - dist  # /(1.+dist*10.)
-
-    max_used_id += 1
-
-    # # Edge features
-    # edge_features = th.zeros(num_rels + 4)
-    # edge_features[rels.index('g_r')] = 1
-    # edge_features[-1] = dist
-    # edge_feats_list.append(edge_features)
-
-    # edge_features = th.zeros(num_rels + 4)
-    # edge_features[rels.index('r_g')] = 1
-    # edge_features[-1] = dist
-    # edge_feats_list.append(edge_features)
-
-    # walls
-    wids = dict()
-    for w_i, wall in enumerate(walls, 0):
-        wall_id = max_used_id
-        wids[wall] = wall_id
-        # typeMap[wall_id] = 'w'  # 'w' for 'walls'
-        max_used_id += 1
-
-        dist = math.sqrt((wall.xpos / 1000.) ** 2 + (wall.ypos / 1000.) ** 2)
-
-        # # Edge features
-        # edge_features = th.zeros(num_rels + 4)
-        # edge_features[rels.index('w_r')] = 1
-        # edge_features[-1] = dist
-        # edge_feats_list.append(edge_features)
-
-        # edge_features = th.zeros(num_rels + 4)
-        # edge_features[rels.index('r_w')] = 1
-        # edge_features[-1] = dist
-        # edge_feats_list.append(edge_features)
-
-
-        # position_by_id[wall_id] = [wall.xpos / 100., wall.ypos / 100.]
-
-        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_orientation_sin')] = math.sin(wall.orientation)
-        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_orientation_cos')] = math.cos(wall.orientation)
-        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_x_pos')] = wall.xpos / 1000.
-        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_y_pos')] = wall.ypos / 1000.
-        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_dist')] = dist
-        graphs.ndata['h'][ini_node+wall_id, all_features.index('wall_inv_dist')] = 1. - dist  # 1./(1.+dist*10.)
-
-
-    # interaction links
-    # for link in data['interaction']:
-    #     typeLdir = typeMap[link['src']] + '_' + typeMap[link['dst']]
-    #     typeLinv = typeMap[link['dst']] + '_' + typeMap[link['src']]
-
-    #     dist = math.sqrt((position_by_id[link['src']][0] - position_by_id[link['dst']][0]) ** 2 +
-    #                      (position_by_id[link['src']][1] - position_by_id[link['dst']][1]) ** 2)
-
-    #     # Edge features
-    #     edge_features = th.zeros(num_rels + 4)
-    #     edge_features[rels.index(typeLdir)] = 1
-    #     edge_features[-1] = dist
-    #     edge_feats_list.append(edge_features)
-
-    #     edge_features = th.zeros(num_rels + 4)
-    #     edge_features[rels.index(typeLinv)] = 1
-    #     edge_features[-1] = dist
-    #     edge_feats_list.append(edge_features)
-
-
-    # # self edges
-    # for node_id in range(n_nodes):
-
-    #     # Edge features
-    #     edge_features = th.zeros(num_rels + 4)
-    #     edge_features[rels.index('self')] = 1
-    #     edge_features[-1] = 0
-    #     edge_feats_list.append(edge_features)
-
-    # # Convert outputs to tensors
-    # edge_feats = th.stack(edge_feats_list)
-
-    # graphs.edata['he'][ini_edge:final_edge:,] = edge_feats
     
-
-
 
 #################################################################
 # Class to load the dataset
@@ -2667,7 +2662,6 @@ class SocNavDataset(DGLDataset):
             final_node += nnodes_in_interval
             ini_edge += num_edges
             final_edge += num_edges
-
 
     def merge_graphs(self, graphs_in_interval):
         all_features, n_features = get_features(self.alt)
