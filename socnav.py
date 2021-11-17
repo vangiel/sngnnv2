@@ -374,8 +374,12 @@ class SocNavDataset(DGLDataset):
             for ds in ds_files:
                 if linen % 1000 == 0:
                     print(linen)
-                with open(ds) as json_file:
-                    data = json.load(json_file)
+                try:
+                    with open(ds) as json_file:
+                        data = json.load(json_file)
+                except Exception:
+                    print("File not found --> ", ds)
+                    continue
                 if self.alt != '7' and self.alt != '8':
                     self.load_one_graph(data)
                 else:
