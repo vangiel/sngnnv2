@@ -1,4 +1,5 @@
 import copy
+import sys
 from collections import namedtuple
 import math
 
@@ -722,10 +723,16 @@ def update_node_features(graphs, w_segments, data, ini_node, final_node, ini_edg
     # graphs.edata['he'][ini_edge:final_edge:,] = edge_feats
 
 
-def calculate_edge_features(x1, y1, a1, x2, y2, a2, type):
+def calculate_edge_features(entity1, entity2, rels):
     # x1 and x2 is the sequence of 3 positions for entity 1 and same thing with x2 y2 for entity 2
     # type variable encode the type of the two entities in the form of r_h for example
-    type1, type2 = type.split("_")
+    x1, y1, a1, type1 = entity1.values()
+    x2, y2, a2, type2 = entity2.values()
+
+    print(x1, y1, a1, type1)
+    print(x2, y2, a2, type2)
+
+    # Define features
     relative_position = ['x', 'y', 'orientation']
     time_to_collision = ['t_collision']
     all_features_1_instant = relative_position + time_to_collision
@@ -737,12 +744,12 @@ def calculate_edge_features(x1, y1, a1, x2, y2, a2, type):
         all_features += [f + '_t' + str(i) for f in all_features_1_instant]
         time_features.append('t' + str(i))
 
-    edge_types_one_hot = ['robot', 'humans_talking']
-    all_features += time_features + edge_types_one_hot
+    edge_types_one_hot = ['humans_talking']
+    all_features += time_features + rels + edge_types_one_hot
 
     edge_features = th.zeros(len(all_features))
 
-    for i in range(N_INTERVALS):
+    for i in range(len(x1)):
         # Calculate relative position
         if type1 == "r":
             x = x2[i]
@@ -753,21 +760,23 @@ def calculate_edge_features(x1, y1, a1, x2, y2, a2, type):
             y = y1[i]
             a = a1[i]
         else:
-            pass
+            x = x1[i] - x2[i]
+            y = y1[i] - y2[i]
+            a = a1[i] - a2[i]
 
         # Calculate time to collision
-        tck, _ = splprep([x1, y1], k=2, s=0)
-        tck1, _ = splprep([x2, y2], k=2, s=0)
-
-        x_new1, y_new1 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck, der=0)
-        x_new2, y_new2 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck1, der=0)
-
+        # tck, _ = splprep([x1, y1], k=2, s=0)
+        # tck1, _ = splprep([x2, y2], k=2, s=0)
+        #
+        # x_new1, y_new1 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck, der=0)
+        # x_new2, y_new2 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck1, der=0)
 
         # Save features
-        edge_features[all_features.index(type)] = 1.
-        edge_features[all_features.index('x')] = 1.
-        edge_features[all_features.index('y')] = 1.
-        edge_features[all_features.index('orientation')] = 1.
+        edge_features[all_features.index(type1 + "_" + type2)] = 1.
+        edge_features[all_features.index('x')] = x
+        edge_features[all_features.index('y')] = y
+        edge_features[all_features.index('orientation')] = a
         edge_features[all_features.index('t_collision')] = 1.
+        sys.exit(0)
 
     return edge_features
