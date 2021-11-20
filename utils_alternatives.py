@@ -6,6 +6,7 @@ import math
 import torch as th
 import numpy as np
 from scipy.interpolate import splprep, splev
+import matplotlib.pyplot as plt
 
 N_INTERVALS = 3
 FRAMES_INTERVAL = 1.
@@ -729,6 +730,9 @@ def calculate_edge_features(entity1, entity2, rels):
     x1, y1, a1, type1 = entity1.values()
     x2, y2, a2, type2 = entity2.values()
 
+    x1, x2 = np.array(x1), np.array(x2)
+    y1, y2 = np.array(y1), np.array(y2)
+
     print(x1, y1, a1, type1)
     print(x2, y2, a2, type2)
 
@@ -752,24 +756,42 @@ def calculate_edge_features(entity1, entity2, rels):
     for i in range(len(x1)):
         # Calculate relative position
         if type1 == "r":
+            tck2, _ = splprep([x2, y2], k=2, s=0)
+            tck1 = None
             x = x2[i]
             y = y2[i]
             a = a2[i]
         elif type2 == "r":
+            tck1, _ = splprep([x1, y1], k=2, s=0)
+            tck2 = None
             x = x1[i]
             y = y1[i]
             a = a1[i]
         else:
+            tck1, _ = splprep([x1, y1], k=2, s=0)
+            tck2, _ = splprep([x2, y2], k=2, s=0)
             x = x1[i] - x2[i]
             y = y1[i] - y2[i]
             a = a1[i] - a2[i]
 
         # Calculate time to collision
-        # tck, _ = splprep([x1, y1], k=2, s=0)
-        # tck1, _ = splprep([x2, y2], k=2, s=0)
-        #
-        # x_new1, y_new1 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck, der=0)
-        # x_new2, y_new2 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck1, der=0)
+        total_divisions = 100
+        extrapolation_amount = 5
+
+        if tck1 is not None:
+            x_new1, y_new1 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck1, der=0)
+        else:
+            x_new1, y_new1 = 0., 0.
+        if tck2 is not None:
+            x_new2, y_new2 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck2, der=0)
+        else:
+            x_new2, y_new2 = 0., 0.
+
+        plt.plot(x_new1, y_new1, 'o', x1, y1, 'o', x_new2, y_new2, 'o', x2, y2, 'o')
+        plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+        plt.axis([x1.min() - 1, x1.max() + 1, y1.min() - 2, y1.max() + 2])
+        plt.show()
+        sys.exit(0)
 
         # Save features
         edge_features[all_features.index(type1 + "_" + type2)] = 1.

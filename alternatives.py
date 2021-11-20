@@ -1463,13 +1463,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             features_by_id[o_id]['x'].append(xpos)
             features_by_id[o_id]['y'].append(ypos)
             features_by_id[o_id]['a'].append(orientation)
-            if last_frame:
-                # Edge features
-                edge_features = calculate_edge_features(features_by_id[o_id], features_by_id[room_id], rels)
-                edge_feats_list.append(edge_features)
-
-                edge_features = calculate_edge_features(features_by_id[room_id], features_by_id[o_id], rels)
-                edge_feats_list.append(edge_features)
+            # if last_frame:
+            #     # Edge features
+            #     edge_features = calculate_edge_features(features_by_id[o_id], features_by_id[room_id], rels)
+            #     edge_feats_list.append(edge_features)
+            #
+            #     edge_features = calculate_edge_features(features_by_id[room_id], features_by_id[o_id], rels)
+            #     edge_feats_list.append(edge_features)
 
             max_used_id += 1
 
