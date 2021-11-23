@@ -5,6 +5,8 @@ import math
 import numpy as np
 import copy
 from pathlib import Path
+from scipy.interpolate import splprep, splev
+import matplotlib.pyplot as plt
 
 
 def get_transformation_matrix_for_pose(x, z, angle):
@@ -62,6 +64,7 @@ for filename in fileList:
         continue
 
     save = filename
+    print(filename)
 
     # Read JSON data into the datastore variable
     if filename:
@@ -119,7 +122,27 @@ for filename in fileList:
             w['x2'] = point2[0][0]
             w['y2'] = point2[1][0]
 
+    total_divisions = 100
+    extrapolation_amount = 1000
     for i in range(len(datastore)):
+        # Robot pose
+        if i != 0:
+            x_r = []
+            y_r = []
+            for d in datastore_absolute[0:i]:
+                x_r.append(d['robot_pose']['x'])
+                y_r.append(d['robot_pose']['y'])
+            x_r.append(datastore_absolute[i]['robot_pose']['x'])
+            y_r.append(datastore_absolute[i]['robot_pose']['y'])
+            x_r = np.array(x_r)
+            y_r = np.array(y_r)
+
+            k = 2 if x_r.size > 13 else 1
+            tck_r, u = splprep([x_r, y_r], k=k, s=0)
+            print(tck_r, u)
+            # ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
+            ex_r, ey_r = splev(u, tck_r[0:3], der=0)
+
         for j, p in enumerate(datastore_absolute[i]['people']):
             if i == 0:
                 p['vx'] = 0.0
@@ -131,6 +154,35 @@ for filename in fileList:
                 p['vx'] = datastore_absolute[i]['people'][j]['x'] - datastore_absolute[i-1]['people'][j]['x']
                 p['vy'] = datastore_absolute[i]['people'][j]['y'] - datastore_absolute[i-1]['people'][j]['y']
                 p['va'] = datastore_absolute[i]['people'][j]['a'] - datastore_absolute[i-1]['people'][j]['a']
+
+            # Calculate time to collision
+            if i == 0:
+                datastore[i]['people'][j]['t_collision'] = 1.
+            else:
+                x_p = []
+                y_p = []
+                for d in datastore_absolute[0:i]:
+                    x_p.append(d['people'][j]['x'])
+                    y_p.append(d['people'][j]['y'])
+                x_p.append(p['x'])
+                y_p.append(p['y'])
+                x_p = np.array(x_p)
+                y_p = np.array(y_p)
+
+                k = 2 if x_p.size > 2 else 1
+                tck_p = splprep([x_p, y_p], k=k, s=0)
+                ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
+
+                print(x_p, y_p)
+                print(x_r, y_r)
+
+                plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
+                plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
+                plt.show()
+
+                if i == 15:
+                    sys.exit(0)
 
         for j, o in enumerate(datastore_absolute[i]['objects']):
             if i == 0:
