@@ -122,14 +122,17 @@ for filename in fileList:
             w['x2'] = point2[0][0]
             w['y2'] = point2[1][0]
 
-    total_divisions = 100
-    extrapolation_amount = 1000
     for i in range(len(datastore)):
         # Robot pose
         if i != 0:
+            total_divisions = 100
+            extrapolation_amount = 10 / (datastore[i-1]['timestamp'] - datastore[i]['timestamp'])
+
             x_r = []
             y_r = []
-            for d in datastore_absolute[0:i]:
+            s = i-2 if i > 2 else 0
+            print(s)
+            for d in datastore_absolute[s:i]:
                 x_r.append(d['robot_pose']['x'])
                 y_r.append(d['robot_pose']['y'])
             x_r.append(datastore_absolute[i]['robot_pose']['x'])
@@ -137,11 +140,9 @@ for filename in fileList:
             x_r = np.array(x_r)
             y_r = np.array(y_r)
 
-            k = 2 if x_r.size > 13 else 1
-            tck_r, u = splprep([x_r, y_r], k=k, s=0)
-            print(tck_r, u)
-            # ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
-            ex_r, ey_r = splev(u, tck_r[0:3], der=0)
+            k = 2 if x_r.size > 2 else 1
+            tck_r = splprep([x_r, y_r], k=k, s=0)
+            ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
 
         for j, p in enumerate(datastore_absolute[i]['people']):
             if i == 0:
@@ -161,7 +162,7 @@ for filename in fileList:
             else:
                 x_p = []
                 y_p = []
-                for d in datastore_absolute[0:i]:
+                for d in datastore_absolute[s:i]:
                     x_p.append(d['people'][j]['x'])
                     y_p.append(d['people'][j]['y'])
                 x_p.append(p['x'])
@@ -169,15 +170,42 @@ for filename in fileList:
                 x_p = np.array(x_p)
                 y_p = np.array(y_p)
 
-                k = 2 if x_p.size > 2 else 1
                 tck_p = splprep([x_p, y_p], k=k, s=0)
                 ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
 
-                print(x_p, y_p)
-                print(x_r, y_r)
+                collision = False
+                for t in range(1, ex_r.size):
+                    line1 = np.array([[ex_p[t-1], ey_p[t-1]], [ex_p[t], ey_p[t]]])
+                    line2 = np.array([[ex_r[t-1], ey_r[t - 1]], [ex_r[t], ey_r[t]]])
+                    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+                    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
-                plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
-                plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                    def det(a, b):
+                        return a[0] * b[1] - a[1] * b[0]
+
+
+                    div = det(xdiff, ydiff)
+                    if div == 0:  # There is no intersection
+                        continue
+                    d = (det(*line1), det(*line2))
+                    x = det(d, xdiff) / div
+                    y = det(d, ydiff) / div
+
+                    if max([ex_p[t], ex_p[t], ex_p[t - 1], ex_p[t - 1]]) >= x >= min([ex_p[t], ex_p[t], ex_p[t - 1], ex_p[t - 1]]):
+                        collision = True
+
+                    if collision:
+                        break
+
+                datastore[i]['people'][j]['t_collision'] = t / total_divisions
+
+                if collision:
+                    plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
+                    plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
+                else:
+                    plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
+                    plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                plt.title("Figure " + str(i))
                 plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
                 plt.show()
 
