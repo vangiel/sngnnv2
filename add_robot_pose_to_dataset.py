@@ -131,7 +131,6 @@ for filename in fileList:
             x_r = []
             y_r = []
             s = i-2 if i > 2 else 0
-            print(s)
             for d in datastore_absolute[s:i]:
                 x_r.append(d['robot_pose']['x'])
                 y_r.append(d['robot_pose']['y'])
@@ -174,15 +173,16 @@ for filename in fileList:
                 ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
 
                 collision = False
-                for t in range(1, ex_r.size):
-                    line1 = np.array([[ex_p[t-1], ey_p[t-1]], [ex_p[t], ey_p[t]]])
-                    line2 = np.array([[ex_r[t-1], ey_r[t - 1]], [ex_r[t], ey_r[t]]])
+                threshold = 5
+                for t in range(1, total_divisions):
+                    th = t - threshold if t > threshold else t
+                    line1 = np.array([[ex_p[t-th], ey_p[t-th]], [ex_p[t], ey_p[t]]])
+                    line2 = np.array([[ex_r[t-th], ey_r[t - th]], [ex_r[t], ey_r[t]]])
                     xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
                     ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
 
                     def det(a, b):
                         return a[0] * b[1] - a[1] * b[0]
-
 
                     div = det(xdiff, ydiff)
                     if div == 0:  # There is no intersection
@@ -191,14 +191,22 @@ for filename in fileList:
                     x = det(d, xdiff) / div
                     y = det(d, ydiff) / div
 
-                    if max([ex_p[t], ex_p[t], ex_p[t - 1], ex_p[t - 1]]) >= x >= min([ex_p[t], ex_p[t], ex_p[t - 1], ex_p[t - 1]]):
+                    p1 = line2[0]
+                    p2 = line2[1]
+                    p3 = np.array([x, y])
+                    distance1 = math.sqrt((p1[0] - p3[0])**2 + (p1[1] - p3[1])**2)
+                    distance2 = math.sqrt((p2[0] - p3[0])**2 + (p2[1] - p3[1])**2)
+
+                    if max([ex_p[t], ex_p[t - th]]) >= x >= min(
+                            [ex_p[t], ex_p[t - th]]) and (distance1 < 0.2 or distance2 < 0.2):
                         collision = True
 
                     if collision:
                         break
 
-                datastore[i]['people'][j]['t_collision'] = t / total_divisions
+                datastore[i]['people'][j]['t_collision'] = (t+1) / total_divisions
 
+                print(datastore[i]['people'][j]['t_collision'])
                 if collision:
                     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
                     plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
@@ -223,6 +231,70 @@ for filename in fileList:
                 o['vx'] = datastore_absolute[i]['objects'][j]['x'] - datastore_absolute[i-1]['objects'][j]['x']
                 o['vy'] = datastore_absolute[i]['objects'][j]['y'] - datastore_absolute[i-1]['objects'][j]['y']
                 o['va'] = datastore_absolute[i]['objects'][j]['a'] - datastore_absolute[i-1]['objects'][j]['a']
+
+            # Calculate time to collision
+            if i == 0:
+                datastore[i]['objects'][j]['t_collision'] = 1.
+            else:
+                x_o = []
+                y_o = []
+                for d in datastore_absolute[s:i]:
+                    x_o.append(d['objects'][j]['x'])
+                    y_o.append(d['objects'][j]['y'])
+                x_o.append(o['x'])
+                y_o.append(o['y'])
+                x_o = np.array(x_o)
+                y_o = np.array(y_o)
+
+                tck_o = splprep([x_o, y_o], k=k, s=0)
+                ex_o, ey_o = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_o[0][0:3], der=0)
+
+                collision = False
+                for t in range(1, total_divisions):
+                    th = t - threshold if t > threshold else t
+                    line1 = np.array([[ex_o[t-th], ey_o[t-th]], [ex_o[t], ey_o[t]]])
+                    line2 = np.array([[ex_r[t-th], ey_r[t - th]], [ex_r[t], ey_r[t]]])
+                    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
+                    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+
+                    def det(a, b):
+                        return a[0] * b[1] - a[1] * b[0]
+
+                    div = det(xdiff, ydiff)
+                    if div == 0:  # There is no intersection
+                        continue
+                    d = (det(*line1), det(*line2))
+                    x = det(d, xdiff) / div
+                    y = det(d, ydiff) / div
+
+                    p1 = line2[0]
+                    p2 = line2[1]
+                    p3 = np.array([x, y])
+                    distance1 = math.sqrt((p1[0] - p3[0])**2 + (p1[1] - p3[1])**2)
+                    distance2 = math.sqrt((p2[0] - p3[0])**2 + (p2[1] - p3[1])**2)
+
+                    if max([ex_o[t], ex_o[t - th]]) >= x >= min(
+                            [ex_o[t], ex_o[t - th]]) and (distance1 < 0.2 or distance2 < 0.2):
+                        collision = True
+
+                    if collision:
+                        break
+
+                datastore[i]['objects'][j]['t_collision'] = (t+1) / total_divisions
+
+                # print(datastore[i]['objects'][j]['t_collision'])
+                # if collision:
+                #     plt.plot(ex_o, ey_o, 'o', x_o, y_o, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
+                #     plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
+                # else:
+                #     plt.plot(ex_o, ey_o, 'o', x_o, y_o, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
+                #     plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                # plt.title("Figure " + str(i))
+                # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
+                # plt.show()
+                #
+                # if i == 15:
+                #     sys.exit(0)
 
     with open(dest_directory + '/' + save, 'w') as outfile:
         json.dump(datastore, outfile, indent=4, sort_keys=True)
