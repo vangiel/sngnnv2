@@ -6,6 +6,7 @@ import numpy as np
 import copy
 from pathlib import Path
 from scipy.interpolate import splprep, splev
+from shapely.geometry.point import Point
 import matplotlib.pyplot as plt
 
 
@@ -122,6 +123,7 @@ for filename in fileList:
             w['x2'] = point2[0][0]
             w['y2'] = point2[1][0]
 
+    entity_radius = 0.15
     for i in range(len(datastore)):
         # Robot pose
         if i != 0:
@@ -173,32 +175,13 @@ for filename in fileList:
                 ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
 
                 collision = False
-                threshold = 5
-                for t in range(1, total_divisions):
-                    th = t - threshold if t > threshold else t
-                    line1 = np.array([[ex_p[t-th], ey_p[t-th]], [ex_p[t], ey_p[t]]])
-                    line2 = np.array([[ex_r[t-th], ey_r[t - th]], [ex_r[t], ey_r[t]]])
-                    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-                    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+                for t in range(total_divisions):
+                    point1 = Point(ex_p[t], ey_p[t])
+                    point2 = Point(ex_r[t], ey_r[t])
+                    circle1 = point1.buffer(entity_radius)
+                    circle2 = point2.buffer(entity_radius)
 
-                    def det(a, b):
-                        return a[0] * b[1] - a[1] * b[0]
-
-                    div = det(xdiff, ydiff)
-                    if div == 0:  # There is no intersection
-                        continue
-                    d = (det(*line1), det(*line2))
-                    x = det(d, xdiff) / div
-                    y = det(d, ydiff) / div
-
-                    p1 = line2[0]
-                    p2 = line2[1]
-                    p3 = np.array([x, y])
-                    distance1 = math.sqrt((p1[0] - p3[0])**2 + (p1[1] - p3[1])**2)
-                    distance2 = math.sqrt((p2[0] - p3[0])**2 + (p2[1] - p3[1])**2)
-
-                    if max([ex_p[t], ex_p[t - th]]) >= x >= min(
-                            [ex_p[t], ex_p[t - th]]) and (distance1 < 0.2 or distance2 < 0.2):
+                    if circle1.intersects(circle2):
                         collision = True
 
                     if collision:
@@ -208,7 +191,7 @@ for filename in fileList:
 
                 # print(datastore[i]['people'][j]['t_collision'])
                 # if collision:
-                #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
+                #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  ex_r[t], ey_r[t], 'o')
                 #     plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
                 # else:
                 #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
@@ -250,31 +233,13 @@ for filename in fileList:
                 ex_o, ey_o = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_o[0][0:3], der=0)
 
                 collision = False
-                for t in range(1, total_divisions):
-                    th = t - threshold if t > threshold else t
-                    line1 = np.array([[ex_o[t-th], ey_o[t-th]], [ex_o[t], ey_o[t]]])
-                    line2 = np.array([[ex_r[t-th], ey_r[t - th]], [ex_r[t], ey_r[t]]])
-                    xdiff = (line1[0][0] - line1[1][0], line2[0][0] - line2[1][0])
-                    ydiff = (line1[0][1] - line1[1][1], line2[0][1] - line2[1][1])
+                for t in range(total_divisions):
+                    point1 = Point(ex_o[t], ey_o[t])
+                    point2 = Point(ex_r[t], ey_r[t])
+                    circle1 = point1.buffer(entity_radius)
+                    circle2 = point2.buffer(entity_radius)
 
-                    def det(a, b):
-                        return a[0] * b[1] - a[1] * b[0]
-
-                    div = det(xdiff, ydiff)
-                    if div == 0:  # There is no intersection
-                        continue
-                    d = (det(*line1), det(*line2))
-                    x = det(d, xdiff) / div
-                    y = det(d, ydiff) / div
-
-                    p1 = line2[0]
-                    p2 = line2[1]
-                    p3 = np.array([x, y])
-                    distance1 = math.sqrt((p1[0] - p3[0])**2 + (p1[1] - p3[1])**2)
-                    distance2 = math.sqrt((p2[0] - p3[0])**2 + (p2[1] - p3[1])**2)
-
-                    if max([ex_o[t], ex_o[t - th]]) >= x >= min(
-                            [ex_o[t], ex_o[t - th]]) and (distance1 < 0.2 or distance2 < 0.2):
+                    if circle1.intersects(circle2):
                         collision = True
 
                     if collision:
@@ -284,7 +249,7 @@ for filename in fileList:
 
                 # print(datastore[i]['objects'][j]['t_collision'])
                 # if collision:
-                #     plt.plot(ex_o, ey_o, 'o', x_o, y_o, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
+                #     plt.plot(ex_o, ey_o, 'o', x_o, y_o, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  ex_r[t], ey_r[t], 'o')
                 #     plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
                 # else:
                 #     plt.plot(ex_o, ey_o, 'o', x_o, y_o, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
