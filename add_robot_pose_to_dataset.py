@@ -206,19 +206,19 @@ for filename in fileList:
 
                 datastore[i]['people'][j]['t_collision'] = (t+1) / total_divisions
 
-                print(datastore[i]['people'][j]['t_collision'])
-                if collision:
-                    plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
-                    plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
-                else:
-                    plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
-                    plt.legend(['spline1', 'data1', 'spline2', 'data2'])
-                plt.title("Figure " + str(i))
-                plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
-                plt.show()
-
-                if i == 15:
-                    sys.exit(0)
+                # print(datastore[i]['people'][j]['t_collision'])
+                # if collision:
+                #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  x, y, 'o')
+                #     plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
+                # else:
+                #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
+                #     plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                # plt.title("Figure " + str(i))
+                # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
+                # plt.show()
+                #
+                # if i == 15:
+                #     sys.exit(0)
 
         for j, o in enumerate(datastore_absolute[i]['objects']):
             if i == 0:
