@@ -88,7 +88,7 @@ for filename in fileList:
         robot_pose['a'] = a
 
         M = get_transformation_matrix_for_pose(x, y, a)
-        M = np.dot(M0, M)
+        # M = np.dot(M0, M)
 
         data['robot_pose'] = copy.deepcopy(robot_pose)
         datastore_absolute[i]['robot_pose'] = copy.deepcopy(robot_pose)
@@ -128,11 +128,11 @@ for filename in fileList:
         # Robot pose
         if i != 0:
             total_divisions = 100
-            extrapolation_amount = 10 / (datastore[i-1]['timestamp'] - datastore[i]['timestamp'])
+            extrapolation_amount = 100 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
 
             x_r = []
             y_r = []
-            s = i-2 if i > 2 else 0
+            s = i-2 if i >= 2 else 0
             for d in datastore_absolute[s:i]:
                 x_r.append(d['robot_pose']['x'])
                 y_r.append(d['robot_pose']['y'])
@@ -144,6 +144,7 @@ for filename in fileList:
             k = 2 if x_r.size > 2 else 1
             tck_r = splprep([x_r, y_r], k=k, s=0)
             ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
+
 
         for j, p in enumerate(datastore_absolute[i]['people']):
             if i == 0:
@@ -199,7 +200,7 @@ for filename in fileList:
                 # plt.title("Figure " + str(i))
                 # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
                 # plt.show()
-                #
+                
                 # if i == 15:
                 #     sys.exit(0)
 
@@ -257,7 +258,7 @@ for filename in fileList:
                 # plt.title("Figure " + str(i))
                 # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
                 # plt.show()
-                #
+                
                 # if i == 15:
                 #     sys.exit(0)
 
