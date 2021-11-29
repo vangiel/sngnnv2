@@ -78,10 +78,10 @@ for filename in fileList:
 
     datastore_absolute = copy.deepcopy(datastore)
     robot_pose = dict()
-    x, y, a = compute_robot_pose(datastore[0]['walls'])
+    x, y, a = compute_robot_pose(datastore[-1]['walls'])
     M = get_transformation_matrix_for_pose(x, y, a)
     M0 = np.linalg.inv(M)
-    for i, data in enumerate(datastore):
+    for i, data in reversed(list(enumerate(datastore))):
         x, y, a = compute_robot_pose(data['walls'])
         robot_pose['x'] = x
         robot_pose['y'] = y
@@ -124,11 +124,14 @@ for filename in fileList:
             w['y2'] = point2[1][0]
 
     entity_radius = 0.15
+
+    datastore = list(reversed(datastore))
+    datastore_absolute = list(reversed(datastore_absolute))
     for i in range(len(datastore)):
         # Robot pose
         if i != 0:
             total_divisions = 100
-            extrapolation_amount = 100 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
+            extrapolation_amount = 200 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
 
             x_r = []
             y_r = []
@@ -200,7 +203,7 @@ for filename in fileList:
                 # plt.title("Figure " + str(i))
                 # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
                 # plt.show()
-                
+                #
                 # if i == 15:
                 #     sys.exit(0)
 
@@ -258,9 +261,71 @@ for filename in fileList:
                 # plt.title("Figure " + str(i))
                 # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
                 # plt.show()
-                
+                #
                 # if i == 15:
                 #     sys.exit(0)
+
+        for j, w in enumerate(datastore_absolute[i]['walls']):
+            if i == 0:
+                datastore[i]['walls'][j]['t_collision'] = 1.
+            else:
+                x_w = np.array([w['x1'], w['x2']])
+                y_w = np.array([w['y1'], w['y2']])
+
+                tck_w = splprep([x_w, y_w], k=1, s=0)
+                ex_w, ey_w = splev(np.linspace(0, 1, total_divisions), tck_w[0][0:3], der=0)
+
+                collision = False
+                for t in range(total_divisions):
+                    point1 = Point(ex_r[t], ey_r[t])
+                    circle1 = point1.buffer(entity_radius)
+                    for idx in range(len(ex_w)):
+                        point2 = Point(ex_w[idx], ey_w[idx])
+                        circle2 = point2.buffer(entity_radius)
+
+                        if circle1.intersects(circle2):
+                            collision = True
+                            break
+
+                    if collision:
+                        break
+
+                datastore[i]['walls'][j]['t_collision'] = (t + 1) / total_divisions
+
+                print(datastore[i]['walls'][j]['t_collision'])
+                if collision:
+                    plt.plot(ex_w, ey_w, 'o', x_w, y_w, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  ex_r[t], ey_r[t], 'o')
+                    plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
+                else:
+                    plt.plot(ex_w, ey_w, 'o', x_w, y_w, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
+                    plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                plt.title("Figure " + str(i))
+                plt.axis([x_w.min() - 5, x_w.max() + 5, y_w.min() - 5, y_w.max() + 5])
+                plt.show()
+
+                if i == 15:
+                    sys.exit(0)
+
+            if i == 0:
+                datastore[i]['goal'][0]['t_collision'] = 1.
+            else:
+                point1 = Point(datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y'])
+                circle1 = point1.buffer(entity_radius)
+                collision = False
+                for t in range(total_divisions):
+                    point2 = Point(ex_r[t], ey_r[t])
+                    circle2 = point2.buffer(entity_radius)
+
+                    if circle1.intersects(circle2):
+                        collision = True
+
+                    if collision:
+                        break
+
+                datastore[i]['goal'][0]['t_collision'] = (t + 1) / total_divisions
+
+    datastore = list(reversed(datastore))
+    datastore_absolute = list(reversed(datastore_absolute))
 
     with open(dest_directory + '/' + save, 'w') as outfile:
         json.dump(datastore, outfile, indent=4, sort_keys=True)
