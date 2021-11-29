@@ -272,11 +272,14 @@ for filename in fileList:
                 x_w = np.array([w['x1'], w['x2']])
                 y_w = np.array([w['y1'], w['y2']])
 
+                total_divisions_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
+                                            (entity_radius * 2))
+
                 tck_w = splprep([x_w, y_w], k=1, s=0)
-                ex_w, ey_w = splev(np.linspace(0, 1, total_divisions), tck_w[0][0:3], der=0)
+                ex_w, ey_w = splev(np.linspace(0, 1, total_divisions_walls), tck_w[0][0:3], der=0)
 
                 collision = False
-                for t in range(total_divisions):
+                for t in range(len(ex_r)):
                     point1 = Point(ex_r[t], ey_r[t])
                     circle1 = point1.buffer(entity_radius)
                     for idx in range(len(ex_w)):
@@ -290,7 +293,7 @@ for filename in fileList:
                     if collision:
                         break
 
-                datastore[i]['walls'][j]['t_collision'] = (t + 1) / total_divisions
+                datastore[i]['walls'][j]['t_collision'] = (t + 1) / len(ex_r)
 
                 # print(datastore[i]['walls'][j]['t_collision'])
                 # if collision:
