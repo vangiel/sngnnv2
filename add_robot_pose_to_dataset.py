@@ -128,6 +128,9 @@ for filename in fileList:
     datastore = list(reversed(datastore))
     datastore_absolute = list(reversed(datastore_absolute))
     for i in range(len(datastore)):
+        entity_splines = []
+        entity_coords = []
+        collision_coords = []
         # Robot pose
         if i != 0:
             total_divisions = 100
@@ -147,6 +150,8 @@ for filename in fileList:
             k = 2 if x_r.size > 2 else 1
             tck_r = splprep([x_r, y_r], k=k, s=0)
             ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
+            entity_splines.append([ex_r, ey_r, 'r'])
+            entity_coords.append([x_r, y_r])
 
 
         for j, p in enumerate(datastore_absolute[i]['people']):
@@ -177,6 +182,8 @@ for filename in fileList:
 
                 tck_p = splprep([x_p, y_p], k=k, s=0)
                 ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
+                entity_splines.append([ex_p, ey_p, 'p'])
+                entity_coords.append([x_p, y_p])
 
                 collision = False
                 for t in range(total_divisions):
@@ -187,6 +194,7 @@ for filename in fileList:
 
                     if circle1.intersects(circle2):
                         collision = True
+                        collision_coords.append([ex_r[t], ey_r[t]])
 
                     if collision:
                         break
@@ -235,6 +243,8 @@ for filename in fileList:
 
                 tck_o = splprep([x_o, y_o], k=k, s=0)
                 ex_o, ey_o = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_o[0][0:3], der=0)
+                entity_splines.append([ex_o, ey_o, 'o'])
+                entity_coords.append([x_o, y_o])
 
                 collision = False
                 for t in range(total_divisions):
@@ -245,6 +255,7 @@ for filename in fileList:
 
                     if circle1.intersects(circle2):
                         collision = True
+                        collision_coords.append([ex_r[t], ey_r[t]])
 
                     if collision:
                         break
@@ -277,6 +288,8 @@ for filename in fileList:
 
                 tck_w = splprep([x_w, y_w], k=1, s=0)
                 ex_w, ey_w = splev(np.linspace(0, 1, total_divisions_walls), tck_w[0][0:3], der=0)
+                entity_splines.append([ex_w, ey_w, 'w'])
+                entity_coords.append([x_w, y_w])
 
                 collision = False
                 for t in range(len(ex_r)):
@@ -288,6 +301,7 @@ for filename in fileList:
 
                         if circle1.intersects(circle2):
                             collision = True
+                            collision_coords.append([ex_r[t], ey_r[t]])
                             break
 
                     if collision:
@@ -314,6 +328,9 @@ for filename in fileList:
             else:
                 point1 = Point(datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y'])
                 circle1 = point1.buffer(entity_radius)
+                entity_splines.append([datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y'], 't'])
+                entity_coords.append([datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y']])
+
                 collision = False
                 for t in range(total_divisions):
                     point2 = Point(ex_r[t], ey_r[t])
@@ -321,11 +338,31 @@ for filename in fileList:
 
                     if circle1.intersects(circle2):
                         collision = True
+                        collision_coords.append([ex_r[t], ey_r[t]])
 
                     if collision:
                         break
 
                 datastore[i]['goal'][0]['t_collision'] = (t + 1) / total_divisions
+
+        colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
+        for e in entity_splines:
+            plt.plot(e[0], e[1], colour[e[2]])
+        for e in entity_coords:
+            plt.plot(e[0], e[1], 'yd')
+        for c in collision_coords:
+            plt.plot(c[0], c[1], 'ko')
+
+        plt.title("Frame " + str(i))
+        max_x = max_y = min_x = min_y = 0.
+        for w in datastore_absolute[i]['walls']:
+            max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
+            max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
+            min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
+            min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
+
+        plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
+        plt.show()
 
     datastore = list(reversed(datastore))
     datastore_absolute = list(reversed(datastore_absolute))
