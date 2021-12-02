@@ -137,7 +137,7 @@ for filename in fileList:
             # Robot pose
             if i != 0:
                 total_divisions = 30
-                extrapolation_amount = 200 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
+                extrapolation_amount = 100 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
 
                 x_r = []
                 y_r = []
