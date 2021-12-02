@@ -27,6 +27,7 @@ MAX_ADV = 3.5
 MAX_ROT = 4.
 MAX_HUMANS = 15
 
+
 #  human to wall distance
 def dist_h_w(h, wall):
     if 'xPos' in h.keys():
@@ -59,6 +60,14 @@ def central_grid_nodes(alt, r):
         return central_nodes
     else:
         return []
+
+
+# TODO: finish this function
+def calculate_relative_position(entity1, entity2):
+    x1, y1, a1 = entity1
+    x2, y2, a2 = entity2
+
+    return x1, x2, a2
 
 
 # Calculate the closet node in the grid to a given node by its coordinates
@@ -333,6 +342,28 @@ def get_features(alt):
     feature_dimensions = len(all_features)
 
     return all_features, feature_dimensions
+
+
+def get_edge_features(alt):
+    # Define features
+    relative_position = ['x', 'y', 'orientation']
+    time_to_collision = ['t_collision']
+    all_features_1_instant = relative_position + time_to_collision
+    all_features = copy.deepcopy(all_features_1_instant)
+
+    # One hot time features
+    time_features = ["t0"]
+    for i in range(1, N_INTERVALS):
+        all_features += [f + '_t' + str(i) for f in all_features_1_instant]
+        time_features.append('t' + str(i))
+
+    rels, _ = get_relations(alt)
+    edge_types_one_hot = ['wandering_human_interacting', 'two_static_person_talking', 'human_laptop_interaction',
+                          'human_plant_interaction']
+    all_features += time_features + rels + edge_types_one_hot
+    n_features = len(all_features)
+
+    return all_features, n_features
 
 
 # Generate data for a grid of nodes
@@ -722,83 +753,3 @@ def update_node_features(graphs, w_segments, data, ini_node, final_node, ini_edg
     # edge_feats = th.stack(edge_feats_list)
 
     # graphs.edata['he'][ini_edge:final_edge:,] = edge_feats
-
-
-def calculate_edge_features(entity1, entity2, rels):
-    # x1 and x2 is the sequence of 3 positions for entity 1 and same thing with x2 y2 for entity 2
-    # type variable encode the type of the two entities in the form of r_h for example
-    x1, y1, a1, type1 = entity1.values()
-    x2, y2, a2, type2 = entity2.values()
-
-    x1, x2 = np.array(x1), np.array(x2)
-    y1, y2 = np.array(y1), np.array(y2)
-
-    print(x1, y1, a1, type1)
-    print(x2, y2, a2, type2)
-
-    # Define features
-    relative_position = ['x', 'y', 'orientation']
-    time_to_collision = ['t_collision']
-    all_features_1_instant = relative_position + time_to_collision
-    all_features = copy.deepcopy(all_features_1_instant)
-
-    # One hot time features
-    time_features = ["t0"]
-    for i in range(1, N_INTERVALS):
-        all_features += [f + '_t' + str(i) for f in all_features_1_instant]
-        time_features.append('t' + str(i))
-
-    edge_types_one_hot = ['humans_talking']
-    all_features += time_features + rels + edge_types_one_hot
-
-    edge_features = th.zeros(len(all_features))
-
-    for i in range(len(x1)):
-        # Calculate relative position
-        if type1 == "r":
-            tck2, _ = splprep([x2, y2], k=2, s=0)
-            tck1 = None
-            x = x2[i]
-            y = y2[i]
-            a = a2[i]
-        elif type2 == "r":
-            tck1, _ = splprep([x1, y1], k=2, s=0)
-            tck2 = None
-            x = x1[i]
-            y = y1[i]
-            a = a1[i]
-        else:
-            tck1, _ = splprep([x1, y1], k=2, s=0)
-            tck2, _ = splprep([x2, y2], k=2, s=0)
-            x = x1[i] - x2[i]
-            y = y1[i] - y2[i]
-            a = a1[i] - a2[i]
-
-        # Calculate time to collision
-        total_divisions = 100
-        extrapolation_amount = 5
-
-        if tck1 is not None:
-            x_new1, y_new1 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck1, der=0)
-        else:
-            x_new1, y_new1 = 0., 0.
-        if tck2 is not None:
-            x_new2, y_new2 = splev(np.linspace(0, extrapolation_amount, total_divisions), tck2, der=0)
-        else:
-            x_new2, y_new2 = 0., 0.
-
-        plt.plot(x_new1, y_new1, 'o', x1, y1, 'o', x_new2, y_new2, 'o', x2, y2, 'o')
-        plt.legend(['spline1', 'data1', 'spline2', 'data2'])
-        plt.axis([x1.min() - 1, x1.max() + 1, y1.min() - 2, y1.max() + 2])
-        plt.show()
-        sys.exit(0)
-
-        # Save features
-        edge_features[all_features.index(type1 + "_" + type2)] = 1.
-        edge_features[all_features.index('x')] = x
-        edge_features[all_features.index('y')] = y
-        edge_features[all_features.index('orientation')] = a
-        edge_features[all_features.index('t_collision')] = 1.
-        sys.exit(0)
-
-    return edge_features

@@ -1,3 +1,5 @@
+import sys
+
 from utils_alternatives import *
 
 
@@ -1366,14 +1368,16 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
     # Feature dimensions
     all_features, n_features = get_features(alt)
+    all_edge_features, n_edge_features = get_edge_features(alt)
     # print(all_features, n_features)
+    edge_features_1 = []
+    edge_features_2 = []
     features = th.zeros(n_nodes, n_features)
     edge_feats_list = []
 
     # Nodes variables
     typeMap = dict()
     position_by_id = {}
-    features_by_id = {} # For calculating edge features
     src_nodes = []  # List to store source nodes
     dst_nodes = []  # List to store destiny nodes
 
@@ -1388,11 +1392,6 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
     t_tag = ['']
     for i in range(1, N_INTERVALS):
         t_tag.append('_t' + str(i))
-
-    if 'step_fraction' in data_sequence[0].keys():
-        step_fraction = data_sequence[0]['step_fraction']
-    else:
-        step_fraction = 0
 
     n_instants = 0
     frames_in_interval = []
@@ -1421,8 +1420,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
         if first_frame:
             typeMap[room_id] = 'r'  # 'r' for 'room'
-            position_by_id[room_id] = [0, 0]
-            features_by_id[room_id] = {'x': [0.], 'y': [0.], 'a': [0.], 'type': 'r'}
+            position_by_id[room_id] = [0, 0, 0]
             features[room_id, all_features.index('room')] = 1.
 
         features[room_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
@@ -1447,9 +1445,9 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
             if first_frame:
                 typeMap[o_id] = 'o'  # 'o' for 'object'
-                position_by_id[o_id] = [xpos, ypos]
+                position_by_id[o_id] = [xpos, ypos, orientation]
                 features[o_id, all_features.index('object')] = 1
-                features_by_id[o_id] = {'x': [], 'y': [], 'a': [], 'type': 'o'}
+
                 src_nodes.append(o_id)
                 dst_nodes.append(room_id)
                 edge_types.append(rels.index('o_r'))
@@ -1460,19 +1458,30 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
                 edge_types.append(rels.index('r_o'))
                 edge_norms.append([1.])
 
-            features_by_id[o_id]['x'].append(xpos)
-            features_by_id[o_id]['y'].append(ypos)
-            features_by_id[o_id]['a'].append(orientation)
-            # if last_frame:
-            #     # Edge features
-            #     edge_features = calculate_edge_features(features_by_id[o_id], features_by_id[room_id], rels)
-            #     edge_feats_list.append(edge_features)
-            #
-            #     edge_features = calculate_edge_features(features_by_id[room_id], features_by_id[o_id], rels)
-            #     edge_feats_list.append(edge_features)
+                # Edge features
+                edge_features_1[o_id] = th.zeros(n_edge_features)
+                edge_features_1[o_id][all_edge_features.index('o_r')] = 1.
+                edge_features_2[o_id] = th.zeros(n_edge_features)
+                edge_features_2[o_id][all_edge_features.index('r_o')] = 1.
 
-            max_used_id += 1
+            # Edge features
+            rx, ry, ra = calculate_relative_position(entity1=(xpos, ypos, orientation), entity2=(0, 0, 0))
+            edge_features_1[o_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+            edge_features_1[o_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+            edge_features_1[o_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+            edge_features_1[o_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = o['t_collision']
 
+            rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, orientation))
+            edge_features_2[o_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+            edge_features_2[o_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+            edge_features_2[o_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+            edge_features_2[o_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = o['t_collision']
+
+            if last_frame:
+                edge_feats_list.append(edge_features_1[o_id])
+                edge_feats_list.append(edge_features_2[o_id])
+
+            # Node features
             features[o_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
             features[o_id, all_features.index('obj_orientation_sin' + t_tag[n_instants])] = math.sin(orientation)
             features[o_id, all_features.index('obj_orientation_cos' + t_tag[n_instants])] = math.cos(orientation)
@@ -1485,6 +1494,8 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             features[o_id, all_features.index('obj_y_size' + t_tag[n_instants])] = o['size_y']
             features[o_id, all_features.index('obj_dist' + t_tag[n_instants])] = dist
             features[o_id, all_features.index('obj_inv_dist' + t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
+
+            max_used_id += 1
 
         # humans
         for h in data['people']:
@@ -1500,9 +1511,8 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
             if first_frame:
                 typeMap[h_id] = 'p'  # 'p' for 'person'
-                position_by_id[h_id] = [xpos, ypos]
+                position_by_id[h_id] = [xpos, ypos, orientation]
                 features[h_id, all_features.index('human')] = 1.
-                features_by_id[h_id] = {'x': [], 'y': [], 'a': [], 'type': 'p'}
 
                 src_nodes.append(h_id)
                 dst_nodes.append(room_id)
@@ -1514,20 +1524,30 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
                 edge_types.append(rels.index('r_p'))
                 edge_norms.append([1.])
 
-            features_by_id[h_id]['x'].append(xpos)
-            features_by_id[h_id]['y'].append(ypos)
-            features_by_id[h_id]['a'].append(orientation)
+                # Edge features
+                edge_features_1[h_id] = th.zeros(n_edge_features)
+                edge_features_1[h_id][all_edge_features.index('p_r')] = 1.
+                edge_features_2[h_id] = th.zeros(n_edge_features)
+                edge_features_2[h_id][all_edge_features.index('r_p')] = 1.
+
+            # Edge features
+            rx, ry, ra = calculate_relative_position(entity1=(xpos, ypos, orientation), entity2=(0, 0, 0))
+            edge_features_1[h_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+            edge_features_1[h_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+            edge_features_1[h_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+            edge_features_1[h_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = h['t_collision']
+
+            rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, orientation))
+            edge_features_2[h_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+            edge_features_2[h_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+            edge_features_2[h_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+            edge_features_2[h_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = h['t_collision']
 
             if last_frame:
-                # Edge features
-                edge_features = calculate_edge_features(features_by_id[h_id], features_by_id[room_id], rels)
-                edge_feats_list.append(edge_features)
+                edge_feats_list.append(edge_features_1[h_id])
+                edge_feats_list.append(edge_features_2[h_id])
 
-                edge_features = calculate_edge_features(features_by_id[room_id], features_by_id[h_id], rels)
-                edge_feats_list.append(edge_features)
-
-            max_used_id += 1
-
+            # Node features
             features[h_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
             features[h_id, all_features.index('hum_orientation_sin' + t_tag[n_instants])] = math.sin(orientation)
             features[h_id, all_features.index('hum_orientation_cos' + t_tag[n_instants])] = math.cos(orientation)
@@ -1540,6 +1560,8 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             features[h_id, all_features.index('hum_inv_dist' + t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
             features[h_id, all_features.index('t' + str(n_instants))] = 1.
 
+            max_used_id += 1
+
         # Goal
         goal_id = max_used_id
         max_used_id += 1
@@ -1549,9 +1571,8 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         dist = math.sqrt(xpos ** 2 + ypos ** 2)
 
         if first_frame:
-            position_by_id[goal_id] = [xpos, ypos]
+            position_by_id[goal_id] = [xpos, ypos, 0.]
             features[goal_id, all_features.index('goal')] = 1
-            features_by_id[goal_id] = {'x': [], 'y': [], 'a': [], 'type': 't'}
             typeMap[goal_id] = 't'  # 't' for 'goal'
             src_nodes.append(goal_id)
             dst_nodes.append(room_id)
@@ -1564,18 +1585,32 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             edge_types.append(rels.index('r_t'))
             edge_norms.append([1.])
 
-        features_by_id[goal_id]['x'].append(xpos)
-        features_by_id[goal_id]['y'].append(ypos)
-        features_by_id[goal_id]['a'].append(0.)
+            # Edge features
+            edge_features_1[goal_id] = th.zeros(n_edge_features)
+            edge_features_1[goal_id][all_edge_features.index('t_r')] = 1.
+            edge_features_2[goal_id] = th.zeros(n_edge_features)
+            edge_features_2[goal_id][all_edge_features.index('r_t')] = 1.
+
+        # Edge features
+        rx, ry, ra = calculate_relative_position(entity1=(xpos, ypos, 0), entity2=(0, 0, 0))
+        edge_features_1[goal_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+        edge_features_1[goal_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+        edge_features_1[goal_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+        edge_features_1[goal_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['goal'][0][
+            't_collision']
+
+        rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, 0))
+        edge_features_2[goal_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+        edge_features_2[goal_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+        edge_features_2[goal_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+        edge_features_2[goal_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['goal'][0][
+            't_collision']
 
         if last_frame:
-            # Edge features
-            edge_features = calculate_edge_features(features_by_id[goal_id], features_by_id[room_id], rels)
-            edge_feats_list.append(edge_features)
+            edge_feats_list.append(edge_features_1[goal_id])
+            edge_feats_list.append(edge_features_2[goal_id])
 
-            edge_features = calculate_edge_features(features_by_id[room_id], features_by_id[goal_id], rels)
-            edge_feats_list.append(edge_features)
-
+        # Node features
         features[goal_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
         features[goal_id, all_features.index('goal_x_pos' + t_tag[n_instants])] = xpos
         features[goal_id, all_features.index('goal_y_pos' + t_tag[n_instants])] = ypos
@@ -1593,12 +1628,10 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
             if first_frame:
                 typeMap[wall_id] = 'w'  # 'w' for 'walls'
-                position_by_id[wall_id] = [wall.xpos / 1000., wall.ypos / 1000.]
+                position_by_id[wall_id] = [wall.xpos / 1000., wall.ypos / 1000., 0.]
                 features[wall_id, all_features.index('wall')] = 1.
 
                 dist = math.sqrt((wall.xpos / 1000.) ** 2 + (wall.ypos / 1000.) ** 2)
-
-                features_by_id[wall_id] = {'x': [], 'y': [], 'a': [], 'type': 'w'}
 
                 # Links to room node
                 src_nodes.append(wall_id)
@@ -1611,18 +1644,31 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
                 edge_types.append(rels.index('r_w'))
                 edge_norms.append([1.])
 
-            features_by_id[wall_id]['x'].append(wall.xpos/1000)
-            features_by_id[wall_id]['y'].append(wall.ypos/1000)
-            features_by_id[wall_id]['a'].append(0.)
+                # Edge features
+                edge_features_1[wall_id] = th.zeros(n_edge_features)
+                edge_features_1[wall_id][all_edge_features.index('w_r')] = 1.
+                edge_features_2[wall_id] = th.zeros(n_edge_features)
+                edge_features_2[wall_id][all_edge_features.index('r_w')] = 1.
+
+            # TODO: Add the correct time to collision to the wall segments!!
+            # Edge features
+            rx, ry, ra = calculate_relative_position(entity1=(xpos, ypos, 0), entity2=(0, 0, 0))
+            edge_features_1[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+            edge_features_1[wall_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+            edge_features_1[wall_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+            edge_features_1[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][0]['t_collision']
+
+            rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, 0))
+            edge_features_2[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
+            edge_features_2[wall_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
+            edge_features_2[wall_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
+            edge_features_2[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][0]['t_collision']
 
             if last_frame:
-                # Edge features
-                edge_features = calculate_edge_features(features_by_id[wall_id], features_by_id[room_id], rels)
-                edge_feats_list.append(edge_features)
+                edge_feats_list.append(edge_features_1[wall_id])
+                edge_feats_list.append(edge_features_2[wall_id])
 
-                edge_features = calculate_edge_features(features_by_id[room_id], features_by_id[wall_id], rels)
-                edge_feats_list.append(edge_features)
-
+            # Node features
             features[wall_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
             features[wall_id, all_features.index('wall_orientation_sin' + t_tag[n_instants])] = math.sin(
                 wall.orientation)
@@ -1642,8 +1688,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         typeLdir = typeMap[link['src']] + '_' + typeMap[link['dst']]
         typeLinv = typeMap[link['dst']] + '_' + typeMap[link['src']]
 
-        dist = math.sqrt((position_by_id[link['src']][0] - position_by_id[link['dst']][0]) ** 2 +
-                         (position_by_id[link['src']][1] - position_by_id[link['dst']][1]) ** 2)
+        x_src = position_by_id[link['src']][0]
+        y_src = position_by_id[link['src']][1]
+        a_src = position_by_id[link['src']][2]
+
+        x_dst = position_by_id[link['dst']][0]
+        y_dst = position_by_id[link['dst']][1]
+        a_dst = position_by_id[link['src']][2]
 
         src_nodes.append(link['src'])
         dst_nodes.append(link['dst'])
@@ -1656,14 +1707,24 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_norms.append([1.])
 
         # Edge features
-        edge_features = th.zeros(num_rels + 4)
-        edge_features[rels.index(typeLdir)] = 1
-        edge_features[-1] = dist
+        rx, ry, ra = calculate_relative_position(entity1=(x_src, y_src, a_src), entity2=(x_dst, y_dst, a_dst))
+        edge_features = th.zeros(n_edge_features)
+        edge_features[all_edge_features.index(typeLdir)] = 1
+        edge_features[all_edge_features.index(link['relation'])] = 1
+        edge_features[all_edge_features.index('x' + t_tag[0])] = rx
+        edge_features[all_edge_features.index('y' + t_tag[0])] = ry
+        edge_features[all_edge_features.index('orientation' + t_tag[0])] = ra
+        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = 1.
         edge_feats_list.append(edge_features)
 
-        edge_features = th.zeros(num_rels + 4)
-        edge_features[rels.index(typeLinv)] = 1
-        edge_features[-1] = dist
+        rx, ry, ra = calculate_relative_position(entity1=(x_dst, y_dst, a_dst), entity2=(x_src, y_src, a_src))
+        edge_features = th.zeros(n_edge_features)
+        edge_features[all_edge_features.index(typeLinv)] = 1
+        edge_features[all_edge_features.index(link['relation'])] = 1
+        edge_features[all_edge_features.index('x' + t_tag[0])] = rx
+        edge_features[all_edge_features.index('y' + t_tag[0])] = ry
+        edge_features[all_edge_features.index('orientation' + t_tag[0])] = ra
+        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = 1.
         edge_feats_list.append(edge_features)
 
     # self edges
@@ -1674,9 +1735,8 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_norms.append([1.])
 
         # Edge features
-        edge_features = th.zeros(num_rels + 4)
-        edge_features[rels.index('self')] = 1
-        edge_features[-1] = 0
+        edge_features = th.zeros(n_edge_features)
+        edge_features[all_edge_features.index('self')] = 1
         edge_feats_list.append(edge_features)
 
     # Convert outputs to tensors
