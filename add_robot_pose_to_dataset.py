@@ -284,7 +284,7 @@ for filename in fileList:
                 y_w = np.array([w['y1'], w['y2']])
 
                 total_divisions_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
-                                            (entity_radius * 2))
+                                            (entity_radius * 3.5))
 
                 tck_w = splprep([x_w, y_w], k=1, s=0)
                 ex_w, ey_w = splev(np.linspace(0, 1, total_divisions_walls), tck_w[0][0:3], der=0)
@@ -345,24 +345,25 @@ for filename in fileList:
 
                 datastore[i]['goal'][0]['t_collision'] = (t + 1) / total_divisions
 
-        colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
-        for e in entity_splines:
-            plt.plot(e[0], e[1], colour[e[2]])
-        for e in entity_coords:
-            plt.plot(e[0], e[1], 'yd')
-        for c in collision_coords:
-            plt.plot(c[0], c[1], 'ko')
-
-        plt.title("Frame " + str(i))
-        max_x = max_y = min_x = min_y = 0.
-        for w in datastore_absolute[i]['walls']:
-            max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
-            max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
-            min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
-            min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
-
-        plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
-        plt.show()
+        # Plot the whole scenario
+        # colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
+        # for e in entity_splines:
+        #     plt.plot(e[0], e[1], colour[e[2]])
+        # for e in entity_coords:
+        #     plt.plot(e[0], e[1], 'yd')
+        # for c in collision_coords:
+        #     plt.plot(c[0], c[1], 'ko')
+        #
+        # plt.title("Frame " + str(i))
+        # max_x = max_y = min_x = min_y = 0.
+        # for w in datastore_absolute[i]['walls']:
+        #     max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
+        #     max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
+        #     min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
+        #     min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
+        #
+        # plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
+        # plt.show()
 
     datastore = list(reversed(datastore))
     datastore_absolute = list(reversed(datastore_absolute))
@@ -371,6 +372,6 @@ for filename in fileList:
         json.dump(datastore, outfile, indent=4, sort_keys=True)
         outfile.close()
 
-    with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
-        json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
-        outfile.close()
+    # with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
+    #     json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
+    #     outfile.close()
