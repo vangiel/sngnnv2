@@ -6,9 +6,11 @@ import numpy as np
 import copy
 from pathlib import Path
 from scipy.interpolate import splprep, splev
-from shapely.geometry.point import Point
+from shapely.geometry import Point, LineString
 import matplotlib.pyplot as plt
 
+# minimum difference in x or y for a given entity between two consecutive frames
+MIN_DIFF = 0.05
 
 def get_transformation_matrix_for_pose(x, z, angle):
     M = np.zeros((3, 3))
@@ -61,7 +63,7 @@ else:
     fileList = os.listdir(directory_path)
 
 for filename in fileList:
-    try:
+    # try:
         if not filename.endswith('.json'):
             continue
 
@@ -142,17 +144,20 @@ for filename in fileList:
                 x_r = []
                 y_r = []
                 s = i-2 if i >= 2 else 0
-                for d in datastore_absolute[s:i]:
-                    x_r.append(d['robot_pose']['x'])
-                    y_r.append(d['robot_pose']['y'])
-                x_r.append(datastore_absolute[i]['robot_pose']['x'])
-                y_r.append(datastore_absolute[i]['robot_pose']['y'])
+                for d in datastore_absolute[s:i+1]:
+                    if not x_r or (x_r[-1] != d['robot_pose']['x'] or y_r[-1] != d['robot_pose']['y']):
+                        x_r.append(d['robot_pose']['x'])
+                        y_r.append(d['robot_pose']['y'])
                 x_r = np.array(x_r)
                 y_r = np.array(y_r)
 
                 k = 2 if x_r.size > 2 else 1
-                tck_r = splprep([x_r, y_r], k=k, s=0)
-                ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
+                if len(x_r) > 1:
+                    tck_r = splprep([x_r, y_r], k=k, s=0)
+                    ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
+                else:
+                    ex_r = [x_r[0]]*total_divisions
+                    ey_r = [y_r[0]]*total_divisions
                 entity_splines.append([ex_r, ey_r, 'r'])
                 entity_coords.append([x_r, y_r])
 
@@ -175,16 +180,23 @@ for filename in fileList:
                 else:
                     x_p = []
                     y_p = []
-                    for d in datastore_absolute[s:i]:
-                        x_p.append(d['people'][j]['x'])
-                        y_p.append(d['people'][j]['y'])
-                    x_p.append(p['x'])
-                    y_p.append(p['y'])
+                    for d in datastore_absolute[s:i+1]:
+                        if not x_p or math.fabs(x_p[-1]-d['people'][j]['x'])>MIN_DIFF or math.fabs(y_p[-1]-d['people'][j]['y'])>MIN_DIFF:
+                            x_p.append(d['people'][j]['x'])
+                            y_p.append(d['people'][j]['y'])
+                    # x_p.append(p['x'])
+                    # y_p.append(p['y'])
                     x_p = np.array(x_p)
                     y_p = np.array(y_p)
 
-                    tck_p = splprep([x_p, y_p], k=k, s=0)
-                    ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
+                    k = 2 if x_p.size > 2 else 1
+                    if len(x_p) > 1:
+                        tck_p = splprep([x_p, y_p], k=k, s=0)
+                        ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
+                    else:
+                        ex_p = [x_p[0]]*total_divisions
+                        ey_p = [y_p[0]]*total_divisions
+
                     entity_splines.append([ex_p, ey_p, 'p'])
                     entity_coords.append([x_p, y_p])
 
@@ -236,16 +248,23 @@ for filename in fileList:
                 else:
                     x_o = []
                     y_o = []
-                    for d in datastore_absolute[s:i]:
-                        x_o.append(d['objects'][j]['x'])
-                        y_o.append(d['objects'][j]['y'])
-                    x_o.append(o['x'])
-                    y_o.append(o['y'])
+                    for d in datastore_absolute[s:i+1]:
+                        if not x_o or math.fabs(x_o[-1]-d['objects'][j]['x'])>MIN_DIFF or math.fabs(y_o[-1]-d['objects'][j]['y'])>MIN_DIFF:
+                            x_o.append(d['objects'][j]['x'])
+                            y_o.append(d['objects'][j]['y'])
+                    # x_o.append(o['x'])
+                    # y_o.append(o['y'])
                     x_o = np.array(x_o)
                     y_o = np.array(y_o)
 
-                    tck_o = splprep([x_o, y_o], k=k, s=0)
-                    ex_o, ey_o = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_o[0][0:3], der=0)
+                    k = 2 if x_o.size > 2 else 1
+                    if len(x_o) > 1:
+                        tck_o = splprep([x_o, y_o], k=k, s=0)
+                        ex_o, ey_o = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_o[0][0:3], der=0)
+                    else:
+                        ex_o = [x_o[0]]*total_divisions
+                        ey_o = [y_o[0]]*total_divisions
+
                     entity_splines.append([ex_o, ey_o, 'o'])
                     entity_coords.append([x_o, y_o])
 
@@ -283,29 +302,35 @@ for filename in fileList:
                 if i == 0:
                     datastore[i]['walls'][j]['t_collision'] = 1.
                 else:
-                    x_w = np.array([w['x1'], w['x2']])
-                    y_w = np.array([w['y1'], w['y2']])
+                    # x_w = np.array([w['x1'], w['x2']])
+                    # y_w = np.array([w['y1'], w['y2']])
 
-                    total_divisions_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
-                                                (entity_radius * 3.5))
+                    # total_divisions_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
+                    #                             (entity_radius * 3.5))
 
-                    tck_w = splprep([x_w, y_w], k=1, s=0)
-                    ex_w, ey_w = splev(np.linspace(0, 1, total_divisions_walls), tck_w[0][0:3], der=0)
-                    entity_splines.append([ex_w, ey_w, 'w'])
-                    entity_coords.append([x_w, y_w])
+                    # tck_w = splprep([x_w, y_w], k=1, s=0)
+                    # ex_w, ey_w = splev(np.linspace(0, 1, total_divisions_walls), tck_w[0][0:3], der=0)
+                    # entity_splines.append([ex_w, ey_w, 'w'])
+                    # entity_coords.append([x_w, y_w])
+
+                    lineSegment = LineString([Point(w['x1'], w['y1']), Point(w['x2'], w['y2'])])
 
                     collision = False
                     for t in range(len(ex_r)):
                         point1 = Point(ex_r[t], ey_r[t])
                         circle1 = point1.buffer(entity_radius)
-                        for idx in range(len(ex_w)):
-                            point2 = Point(ex_w[idx], ey_w[idx])
-                            circle2 = point2.buffer(entity_radius)
+                        if circle1.intersects(lineSegment):
+                            collision = True
+                            collision_coords.append([ex_r[t], ey_r[t]])
 
-                            if circle1.intersects(circle2):
-                                collision = True
-                                collision_coords.append([ex_r[t], ey_r[t]])
-                                break
+                        # for idx in range(len(ex_w)):
+                        #     point2 = Point(ex_w[idx], ey_w[idx])
+                        #     circle2 = point2.buffer(entity_radius)
+
+                        #     if circle1.intersects(circle2):
+                        #         collision = True
+                        #         collision_coords.append([ex_r[t], ey_r[t]])
+                        #         break
 
                         if collision:
                             break
@@ -329,10 +354,10 @@ for filename in fileList:
                 if i == 0:
                     datastore[i]['goal'][0]['t_collision'] = 1.
                 else:
-                    point1 = Point(datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y'])
+                    point1 = Point(datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'])
                     circle1 = point1.buffer(entity_radius)
-                    entity_splines.append([datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y'], 't'])
-                    entity_coords.append([datastore[i]['goal'][0]['x'], datastore[i]['goal'][0]['y']])
+                    entity_splines.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'], 't'])
+                    entity_coords.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y']])
 
                     collision = False
                     for t in range(total_divisions):
@@ -349,24 +374,25 @@ for filename in fileList:
                     datastore[i]['goal'][0]['t_collision'] = (t + 1) / total_divisions
 
             # Plot the whole scenario
-            # colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
-            # for e in entity_splines:
-            #     plt.plot(e[0], e[1], colour[e[2]])
-            # for e in entity_coords:
-            #     plt.plot(e[0], e[1], 'yd')
-            # for c in collision_coords:
-            #     plt.plot(c[0], c[1], 'ko')
-            #
-            # plt.title("Frame " + str(i))
-            # max_x = max_y = min_x = min_y = 0.
-            # for w in datastore_absolute[i]['walls']:
-            #     max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
-            #     max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
-            #     min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
-            #     min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
-            #
-            # plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
-            # plt.show()
+            colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
+            for e in entity_splines:
+                plt.plot(e[0], e[1], colour[e[2]])
+            for e in entity_coords:
+                plt.plot(e[0], e[1], 'yd')
+            for c in collision_coords:
+                plt.plot(c[0], c[1], 'ko')
+            
+            plt.title("Frame " + str(i))
+            max_x = max_y = min_x = min_y = 0.
+            for w in datastore_absolute[i]['walls']:
+                plt.plot([w['x1'], w['x2']], [w['y1'], w['y2']], 'm')
+                max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
+                max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
+                min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
+                min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
+            
+            plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
+            plt.show()
 
         datastore = list(reversed(datastore))
         datastore_absolute = list(reversed(datastore_absolute))
@@ -378,12 +404,12 @@ for filename in fileList:
         # with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
         #     json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
         #     outfile.close()
-    except BaseException as err:
-        with open('jsons_problems.txt', 'a') as f:
-            f.write(filename + "\n")
-            f.write(f"Unexpected {err}, {type(err)}" + "\n" + "\n")
+    # except BaseException as err:
+    #     with open('jsons_problems.txt', 'a') as f:
+    #         f.write(filename + "\n")
+    #         f.write(f"Unexpected {err}, {type(err)}" + "\n" + "\n")
 
-        if type(err) == KeyboardInterrupt:
-            exit()
-        else:
-            continue
+    #     if type(err) == KeyboardInterrupt:
+    #         exit()
+    #     else:
+    #         continue
