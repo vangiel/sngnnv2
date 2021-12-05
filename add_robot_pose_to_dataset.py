@@ -8,9 +8,15 @@ from pathlib import Path
 from scipy.interpolate import splprep, splev
 from shapely.geometry import Point, LineString
 import matplotlib.pyplot as plt
+from collections import deque
 
 # minimum difference in x or y for a given entity between two consecutive frames
 MIN_DIFF = 0.05
+# Radius of the entities considered for calculating collision
+ENTITY_RADIUS = 0.15
+DIST_THRESHOLD = 0.2
+TOTAL_DIVISIONS = 30
+EXTRAPOLATION_FACTOR = .2
 
 def get_transformation_matrix_for_pose(x, z, angle):
     M = np.zeros((3, 3))
@@ -128,8 +134,6 @@ for filename in fileList:
                 w['x2'] = point2[0][0]
                 w['y2'] = point2[1][0]
 
-        entity_radius = 0.15
-
         datastore = list(reversed(datastore))
         datastore_absolute = list(reversed(datastore_absolute))
         for i in range(len(datastore)):
@@ -137,27 +141,46 @@ for filename in fileList:
             entity_coords = []
             collision_coords = []
             # Robot pose
-            if i != 0:
-                total_divisions = 30
-                extrapolation_amount = 100 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
+            if i == 0:
+                r_q = deque()
+                r_q.append([datastore_absolute[i]['robot_pose']['x'], datastore_absolute[i]['robot_pose']['y'],
+                            datastore[i]['timestamp']])
+            else:
+                r_q.append([datastore_absolute[i]['robot_pose']['x'], datastore_absolute[i]['robot_pose']['y'],
+                            datastore[i]['timestamp']])
+                x_r = [r_q[-1][0]]
+                y_r = [r_q[-1][1]]
 
-                x_r = []
-                y_r = []
-                s = i-2 if i >= 2 else 0
-                for d in datastore_absolute[s:i+1]:
-                    if not x_r or (x_r[-1] != d['robot_pose']['x'] or y_r[-1] != d['robot_pose']['y']):
-                        x_r.append(d['robot_pose']['x'])
-                        y_r.append(d['robot_pose']['y'])
+                if (r_q[-1][2] - r_q[0][2]) < 0.5:
+                    x_r.append(r_q[0][0])
+                    y_r.append(r_q[0][1])
+                    time_inc = r_q[-1][2] - r_q[0][2]
+                elif (r_q[-1][2] - r_q[0][2]) >= 1.5:
+                    x_r.append(r_q[int(len(r_q)/2)][0])
+                    y_r.append(r_q[int(len(r_q)/2)][1])
+                    p = r_q.popleft()
+                    x_r.append(p[0])
+                    y_r.append(p[1])
+                    time_inc = p[2] - r_q[int(len(r_q)/2)][2]
+
+                for idx in range(1, len(x_r)):
+                    dist = math.sqrt((x_r[idx] - x_r[idx-1])**2 + (y_r[idx] - y_r[idx-1])**2)
+                    if dist <= DIST_THRESHOLD:
+                        x_r = [x_r[0]]
+                        y_r = [y_r[0]]
+                        break
+
                 x_r = np.array(x_r)
                 y_r = np.array(y_r)
 
                 k = 2 if x_r.size > 2 else 1
                 if len(x_r) > 1:
+                    extrapolation_amount = EXTRAPOLATION_FACTOR * math.sqrt((x_r[-1] - x_r[-2]) ** 2 + (y_r[-1] - y_r[-2]) ** 2)
                     tck_r = splprep([x_r, y_r], k=k, s=0)
-                    ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_r[0][0:3], der=0)
+                    ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, TOTAL_DIVISIONS), tck_r[0][0:3], der=0)
                 else:
-                    ex_r = [x_r[0]]*total_divisions
-                    ey_r = [y_r[0]]*total_divisions
+                    ex_r = [x_r[0]]*TOTAL_DIVISIONS
+                    ey_r = [y_r[0]]*TOTAL_DIVISIONS
                 entity_splines.append([ex_r, ey_r, 'r'])
                 entity_coords.append([x_r, y_r])
 
@@ -176,36 +199,53 @@ for filename in fileList:
 
                 # Calculate time to collision
                 if i == 0:
-                    datastore[i]['people'][j]['t_collision'] = 1.
+                    datastore[i]['people'][j]['t_collision'] = -1.
+                    p_q = deque()
+                    p_q.append([p['x'], p['y'], datastore[i]['timestamp']])
                 else:
-                    x_p = []
-                    y_p = []
-                    for d in datastore_absolute[s:i+1]:
-                        if not x_p or math.fabs(x_p[-1]-d['people'][j]['x'])>MIN_DIFF or math.fabs(y_p[-1]-d['people'][j]['y'])>MIN_DIFF:
-                            x_p.append(d['people'][j]['x'])
-                            y_p.append(d['people'][j]['y'])
-                    # x_p.append(p['x'])
-                    # y_p.append(p['y'])
+                    p_q.append([p['x'], p['y'], datastore[i]['timestamp']])
+                    x_p = [p_q[-1][0]]
+                    y_p = [p_q[-1][1]]
+
+                    if (r_q[-1][2] - r_q[0][2]) < 0.5:
+                        x_p.append(p_q[0][0])
+                        y_p.append(p_q[0][1])
+                    elif (r_q[-1][2] - r_q[0][2]) >= 1.5:
+                        x_p.append(p_q[int(len(p_q) / 2)][0])
+                        y_p.append(p_q[int(len(p_q) / 2)][1])
+                        p = p_q.popleft()
+                        x_p.append(p[0])
+                        y_p.append(p[1])
+
+                    for idx in range(1, len(x_p)):
+                        dist = math.sqrt((x_p[idx] - x_p[idx - 1]) ** 2 + (y_p[idx] - y_p[idx - 1]) ** 2)
+                        if dist <= DIST_THRESHOLD:
+                            x_p = [x_p[0]]
+                            y_p = [y_p[0]]
+                            break
+
                     x_p = np.array(x_p)
                     y_p = np.array(y_p)
 
                     k = 2 if x_p.size > 2 else 1
                     if len(x_p) > 1:
+                        extrapolation_amount = EXTRAPOLATION_FACTOR * math.sqrt(
+                            (x_p[-1] - x_p[-2]) ** 2 + (y_p[-1] - y_p[-2]) ** 2)
                         tck_p = splprep([x_p, y_p], k=k, s=0)
-                        ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_p[0][0:3], der=0)
+                        ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, TOTAL_DIVISIONS), tck_p[0][0:3], der=0)
                     else:
-                        ex_p = [x_p[0]]*total_divisions
-                        ey_p = [y_p[0]]*total_divisions
+                        ex_p = [x_p[0]]*TOTAL_DIVISIONS
+                        ey_p = [y_p[0]]*TOTAL_DIVISIONS
 
                     entity_splines.append([ex_p, ey_p, 'p'])
                     entity_coords.append([x_p, y_p])
 
                     collision = False
-                    for t in range(total_divisions):
+                    for t in range(TOTAL_DIVISIONS):
                         point1 = Point(ex_p[t], ey_p[t])
                         point2 = Point(ex_r[t], ey_r[t])
-                        circle1 = point1.buffer(entity_radius)
-                        circle2 = point2.buffer(entity_radius)
+                        circle1 = point1.buffer(ENTITY_RADIUS)
+                        circle2 = point2.buffer(ENTITY_RADIUS)
 
                         if circle1.intersects(circle2):
                             collision = True
@@ -214,21 +254,24 @@ for filename in fileList:
                         if collision:
                             break
 
-                    datastore[i]['people'][j]['t_collision'] = (t+1) / total_divisions
+                    if t+1 < TOTAL_DIVISIONS:
+                        datastore[i]['people'][j]['t_collision'] = (t+1) * time_inc
+                    else:
+                        datastore[i]['people'][j]['t_collision'] = -1.
 
-                    # print(datastore[i]['people'][j]['t_collision'])
-                    # if collision:
-                    #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  ex_r[t], ey_r[t], 'o')
-                    #     plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
-                    # else:
-                    #     plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
-                    #     plt.legend(['spline1', 'data1', 'spline2', 'data2'])
-                    # plt.title("Figure " + str(i))
-                    # plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
-                    # plt.show()
-                    #
-                    # if i == 15:
-                    #     sys.exit(0)
+                    print(datastore[i]['people'][j]['t_collision'])
+                    if collision:
+                        plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o',  ex_r[t], ey_r[t], 'o')
+                        plt.legend(['spline1', 'data1', 'spline2', 'data2', 'collision'])
+                    else:
+                        plt.plot(ex_p, ey_p, 'o', x_p, y_p, 'o', ex_r, ey_r, 'o', x_r, y_r, 'o')
+                        plt.legend(['spline1', 'data1', 'spline2', 'data2'])
+                    plt.title("Figure " + str(i))
+                    plt.axis([x_r.min() - 5, x_r.max() + 5, y_r.min() - 5, y_r.max() + 5])
+                    plt.show()
+
+                    if i == 15:
+                        sys.exit(0)
 
             for j, o in enumerate(datastore_absolute[i]['objects']):
                 if i == 0:
@@ -244,36 +287,18 @@ for filename in fileList:
 
                 # Calculate time to collision
                 if i == 0:
-                    datastore[i]['objects'][j]['t_collision'] = 1.
+                    datastore[i]['objects'][j]['t_collision'] = -1.
                 else:
-                    x_o = []
-                    y_o = []
-                    for d in datastore_absolute[s:i+1]:
-                        if not x_o or math.fabs(x_o[-1]-d['objects'][j]['x'])>MIN_DIFF or math.fabs(y_o[-1]-d['objects'][j]['y'])>MIN_DIFF:
-                            x_o.append(d['objects'][j]['x'])
-                            y_o.append(d['objects'][j]['y'])
-                    # x_o.append(o['x'])
-                    # y_o.append(o['y'])
-                    x_o = np.array(x_o)
-                    y_o = np.array(y_o)
+                    point1 = Point(o['x'], o['y'])
+                    circle1 = point1.buffer(ENTITY_RADIUS)
 
-                    k = 2 if x_o.size > 2 else 1
-                    if len(x_o) > 1:
-                        tck_o = splprep([x_o, y_o], k=k, s=0)
-                        ex_o, ey_o = splev(np.linspace(0, extrapolation_amount, total_divisions), tck_o[0][0:3], der=0)
-                    else:
-                        ex_o = [x_o[0]]*total_divisions
-                        ey_o = [y_o[0]]*total_divisions
-
-                    entity_splines.append([ex_o, ey_o, 'o'])
-                    entity_coords.append([x_o, y_o])
+                    entity_splines.append([o['x'], o['y'], 'o'])
+                    entity_coords.append([o['x'], o['y']])
 
                     collision = False
-                    for t in range(total_divisions):
-                        point1 = Point(ex_o[t], ey_o[t])
+                    for t in range(TOTAL_DIVISIONS):
                         point2 = Point(ex_r[t], ey_r[t])
-                        circle1 = point1.buffer(entity_radius)
-                        circle2 = point2.buffer(entity_radius)
+                        circle2 = point2.buffer(ENTITY_RADIUS)
 
                         if circle1.intersects(circle2):
                             collision = True
@@ -282,7 +307,10 @@ for filename in fileList:
                         if collision:
                             break
 
-                    datastore[i]['objects'][j]['t_collision'] = (t+1) / total_divisions
+                    if t+1 < TOTAL_DIVISIONS:
+                        datastore[i]['objects'][j]['t_collision'] = (t + 1) * time_inc
+                    else:
+                        datastore[i]['objects'][j]['t_collision'] = -1.
 
                     # print(datastore[i]['objects'][j]['t_collision'])
                     # if collision:
@@ -300,16 +328,16 @@ for filename in fileList:
 
             for j, w in enumerate(datastore_absolute[i]['walls']):
                 if i == 0:
-                    datastore[i]['walls'][j]['t_collision'] = 1.
+                    datastore[i]['walls'][j]['t_collision'] = -1.
                 else:
                     # x_w = np.array([w['x1'], w['x2']])
                     # y_w = np.array([w['y1'], w['y2']])
 
-                    # total_divisions_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
+                    # TOTAL_DIVISIONS_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
                     #                             (entity_radius * 3.5))
 
                     # tck_w = splprep([x_w, y_w], k=1, s=0)
-                    # ex_w, ey_w = splev(np.linspace(0, 1, total_divisions_walls), tck_w[0][0:3], der=0)
+                    # ex_w, ey_w = splev(np.linspace(0, 1, TOTAL_DIVISIONS_walls), tck_w[0][0:3], der=0)
                     # entity_splines.append([ex_w, ey_w, 'w'])
                     # entity_coords.append([x_w, y_w])
 
@@ -318,7 +346,7 @@ for filename in fileList:
                     collision = False
                     for t in range(len(ex_r)):
                         point1 = Point(ex_r[t], ey_r[t])
-                        circle1 = point1.buffer(entity_radius)
+                        circle1 = point1.buffer(ENTITY_RADIUS)
                         if circle1.intersects(lineSegment):
                             collision = True
                             collision_coords.append([ex_r[t], ey_r[t]])
@@ -335,7 +363,10 @@ for filename in fileList:
                         if collision:
                             break
 
-                    datastore[i]['walls'][j]['t_collision'] = (t + 1) / len(ex_r)
+                    if t+1 < TOTAL_DIVISIONS:
+                        datastore[i]['walls'][j]['t_collision'] = (t + 1) * time_inc
+                    else:
+                        datastore[i]['walls'][j]['t_collision'] = -1.
 
                     # print(datastore[i]['walls'][j]['t_collision'])
                     # if collision:
@@ -351,48 +382,52 @@ for filename in fileList:
                     # if i == 15:
                     #     sys.exit(0)
 
-                if i == 0:
-                    datastore[i]['goal'][0]['t_collision'] = 1.
+            if i == 0:
+                datastore[i]['goal'][0]['t_collision'] = -1.
+            else:
+                point1 = Point(datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'])
+                circle1 = point1.buffer(ENTITY_RADIUS)
+                entity_splines.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'], 't'])
+                entity_coords.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y']])
+
+                collision = False
+                for t in range(TOTAL_DIVISIONS):
+                    point2 = Point(ex_r[t], ey_r[t])
+                    circle2 = point2.buffer(ENTITY_RADIUS)
+
+                    if circle1.intersects(circle2):
+                        collision = True
+                        collision_coords.append([ex_r[t], ey_r[t]])
+
+                    if collision:
+                        break
+
+                if t+1 < TOTAL_DIVISIONS:
+                    datastore[i]['goal'][0]['t_collision'] = (t + 1) * time_inc
                 else:
-                    point1 = Point(datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'])
-                    circle1 = point1.buffer(entity_radius)
-                    entity_splines.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'], 't'])
-                    entity_coords.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y']])
+                    datastore[i]['goal'][0]['t_collision'] = -1.
 
-                    collision = False
-                    for t in range(total_divisions):
-                        point2 = Point(ex_r[t], ey_r[t])
-                        circle2 = point2.buffer(entity_radius)
-
-                        if circle1.intersects(circle2):
-                            collision = True
-                            collision_coords.append([ex_r[t], ey_r[t]])
-
-                        if collision:
-                            break
-
-                    datastore[i]['goal'][0]['t_collision'] = (t + 1) / total_divisions
 
             # Plot the whole scenario
-            colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
-            for e in entity_splines:
-                plt.plot(e[0], e[1], colour[e[2]])
-            for e in entity_coords:
-                plt.plot(e[0], e[1], 'yd')
-            for c in collision_coords:
-                plt.plot(c[0], c[1], 'ko')
-            
-            plt.title("Frame " + str(i))
-            max_x = max_y = min_x = min_y = 0.
-            for w in datastore_absolute[i]['walls']:
-                plt.plot([w['x1'], w['x2']], [w['y1'], w['y2']], 'm')
-                max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
-                max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
-                min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
-                min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
-            
-            plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
-            plt.show()
+            # colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
+            # for e in entity_splines:
+            #     plt.plot(e[0], e[1], colour[e[2]])
+            # for e in entity_coords:
+            #     plt.plot(e[0], e[1], 'yd')
+            # for c in collision_coords:
+            #     plt.plot(c[0], c[1], 'ko')
+            #
+            # plt.title("Frame " + str(i))
+            # max_x = max_y = min_x = min_y = 0.
+            # for w in datastore_absolute[i]['walls']:
+            #     plt.plot([w['x1'], w['x2']], [w['y1'], w['y2']], 'm')
+            #     max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
+            #     max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
+            #     min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
+            #     min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
+            #
+            # plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
+            # plt.show()
 
         datastore = list(reversed(datastore))
         datastore_absolute = list(reversed(datastore_absolute))
@@ -404,6 +439,7 @@ for filename in fileList:
         # with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
         #     json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
         #     outfile.close()
+
     # except BaseException as err:
     #     with open('jsons_problems.txt', 'a') as f:
     #         f.write(filename + "\n")
