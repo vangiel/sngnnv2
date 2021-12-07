@@ -6,7 +6,7 @@ import numpy as np
 import copy
 from pathlib import Path
 from scipy.interpolate import splprep, splev
-from shapely.geometry import Point, LineString
+from shapely.geometry import Point, LineString, box
 import matplotlib.pyplot as plt
 from collections import deque
 
@@ -367,12 +367,15 @@ for filename in fileList:
                     # entity_coords.append([x_w, y_w])
 
                     lineSegment = LineString([Point(w['x1'], w['y1']), Point(w['x2'], w['y2'])])
+                    lineSegmentLeft = lineSegment.parallel_offset(0.15, 'left')
+                    lineSegmentRight = lineSegment.parallel_offset(0.15, 'right')
 
                     collision = False
                     for t in range(len(ex_r)):
                         point1 = Point(ex_r[t], ey_r[t])
                         circle1 = point1.buffer(ENTITY_RADIUS)
-                        if circle1.intersects(lineSegment):
+                        if circle1.intersects(lineSegment) or circle1.intersects(lineSegmentLeft) or\
+                                circle1.intersects(lineSegmentRight):
                             collision = True
                             collision_coords.append([ex_r[t], ey_r[t]])
 
