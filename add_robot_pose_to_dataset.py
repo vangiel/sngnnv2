@@ -6,7 +6,7 @@ import numpy as np
 import copy
 from pathlib import Path
 from scipy.interpolate import splprep, splev
-from shapely.geometry import Point, LineString, box
+from shapely.geometry import Point, LineString, box, Polygon
 import matplotlib.pyplot as plt
 from collections import deque
 
@@ -171,20 +171,6 @@ for filename in fileList:
                     if (r_q[-1][2] - r_q[0][2]) >= 1.:
                         p = r_q.popleft()
 
-                # elif (r_q[-1][2] - r_q[0][2]) >= 1.5:
-                #     x_r.append(r_q[int(len(r_q)/2)][0])
-                #     y_r.append(r_q[int(len(r_q)/2)][1])
-                #     p = r_q.popleft()
-                #     x_r.append(p[0])
-                #     y_r.append(p[1])
-                #     time_inc = p[2] - r_q[int(len(r_q)/2)][2]
-
-                # for idx in range(1, len(x_r)):
-                #     dist = math.sqrt((x_r[idx] - x_r[idx-1])**2 + (y_r[idx] - y_r[idx-1])**2)
-                #     if dist <= DIST_THRESHOLD:
-                #         x_r = [x_r[0]]
-                #         y_r = [y_r[0]]
-                #         break
 
                 x_r = np.array(x_r)
                 y_r = np.array(y_r)
@@ -192,7 +178,7 @@ for filename in fileList:
                 k = 2 if x_r.size > 2 else 1
                 if len(x_r) > 1:
                     # extrapolation_amount = EXTRAPOLATION_FACTOR * math.sqrt((x_r[-1] - x_r[-2]) ** 2 + (y_r[-1] - y_r[-2]) ** 2)
-                    extrapolation_amount = 100 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])
+                    extrapolation_amount = TOTAL_DIVISIONS/(len(x_r)-1)
                     tck_r = splprep([x_r, y_r], k=k, s=0)
                     ex_r, ey_r = splev(np.linspace(0, extrapolation_amount, TOTAL_DIVISIONS), tck_r[0][0:3], der=0)
                 else:
@@ -207,8 +193,6 @@ for filename in fileList:
                     p['vx'] = 0.0
                     p['vy'] = 0.0
                     p['va'] = 0.0
-                # elif j == len(datastore_absolute[i]['people']):
-                #     break
                 else:
                     p['vx'] = datastore_absolute[i]['people'][j]['x'] - datastore_absolute[i-1]['people'][j]['x']
                     p['vy'] = datastore_absolute[i]['people'][j]['y'] - datastore_absolute[i-1]['people'][j]['y']
@@ -216,7 +200,7 @@ for filename in fileList:
 
                 # Calculate time to collision
                 if i == 0:
-                    datastore[i]['people'][j]['t_collision'] = -1.
+                    datastore[i]['people'][j]['t_collision'] = math.inf
                     p_q[j] = deque()
                     p_q[j].append([p['x'], p['y'], datastore[i]['timestamp']])
                 else:
@@ -241,13 +225,6 @@ for filename in fileList:
                         if (p_q[j][-1][2] - p_q[j][0][2]) >= 1.:
                             p = p_q[j].popleft()
 
-                    # for idx in range(1, len(x_p)):
-                    #     dist = math.sqrt((x_p[idx] - x_p[idx - 1]) ** 2 + (y_p[idx] - y_p[idx - 1]) ** 2)
-                    #     if dist <= DIST_THRESHOLD:
-                    #         x_p = [x_p[0]]
-                    #         y_p = [y_p[0]]
-                    #         break
-
                     x_p = np.array(x_p)
                     y_p = np.array(y_p)
 
@@ -255,7 +232,7 @@ for filename in fileList:
                     if len(x_p) > 1:
                         # extrapolation_amount = EXTRAPOLATION_FACTOR * math.sqrt(
                             # (x_p[-1] - x_p[-2]) ** 2 + (y_p[-1] - y_p[-2]) ** 2)
-                        extrapolation_amount = 20 * (datastore[i]['timestamp'] - datastore[i-1]['timestamp'])                            
+                        extrapolation_amount = TOTAL_DIVISIONS/(len(x_p)-1)
                         tck_p = splprep([x_p, y_p], k=k, s=0)
                         ex_p, ey_p = splev(np.linspace(0, extrapolation_amount, TOTAL_DIVISIONS), tck_p[0][0:3], der=0)
                     else:
@@ -282,7 +259,7 @@ for filename in fileList:
                     if t+1 < TOTAL_DIVISIONS:
                         datastore[i]['people'][j]['t_collision'] = (t+1) * time_inc
                     else:
-                        datastore[i]['people'][j]['t_collision'] = -1.
+                        datastore[i]['people'][j]['t_collision'] = math.inf
 
                     # print(datastore[i]['people'][j]['t_collision'])
                     # if collision:
@@ -312,7 +289,7 @@ for filename in fileList:
 
                 # Calculate time to collision
                 if i == 0:
-                    datastore[i]['objects'][j]['t_collision'] = -1.
+                    datastore[i]['objects'][j]['t_collision'] = math.inf
                 else:
                     point1 = Point(o['x'], o['y'])
                     circle1 = point1.buffer(ENTITY_RADIUS)
@@ -335,7 +312,7 @@ for filename in fileList:
                     if t+1 < TOTAL_DIVISIONS:
                         datastore[i]['objects'][j]['t_collision'] = (t + 1) * time_inc
                     else:
-                        datastore[i]['objects'][j]['t_collision'] = -1.
+                        datastore[i]['objects'][j]['t_collision'] = math.inf
 
                     # print(datastore[i]['objects'][j]['t_collision'])
                     # if collision:
@@ -353,18 +330,8 @@ for filename in fileList:
 
             for j, w in enumerate(datastore_absolute[i]['walls']):
                 if i == 0:
-                    datastore[i]['walls'][j]['t_collision'] = -1.
+                    datastore[i]['walls'][j]['t_collision'] = math.inf
                 else:
-                    # x_w = np.array([w['x1'], w['x2']])
-                    # y_w = np.array([w['y1'], w['y2']])
-
-                    # TOTAL_DIVISIONS_walls = int(math.sqrt((w['x2'] - w['x1'])**2 + (w['y2'] - w['y1'])**2) /
-                    #                             (entity_radius * 3.5))
-
-                    # tck_w = splprep([x_w, y_w], k=1, s=0)
-                    # ex_w, ey_w = splev(np.linspace(0, 1, TOTAL_DIVISIONS_walls), tck_w[0][0:3], der=0)
-                    # entity_splines.append([ex_w, ey_w, 'w'])
-                    # entity_coords.append([x_w, y_w])
 
                     lineSegment = LineString([Point(w['x1'], w['y1']), Point(w['x2'], w['y2'])])
                     lineSegmentLeft = lineSegment.parallel_offset(0.15, 'left')
@@ -394,7 +361,7 @@ for filename in fileList:
                     if t+1 < TOTAL_DIVISIONS:
                         datastore[i]['walls'][j]['t_collision'] = (t + 1) * time_inc
                     else:
-                        datastore[i]['walls'][j]['t_collision'] = -1.
+                        datastore[i]['walls'][j]['t_collision'] = math.inf
 
                     # print(datastore[i]['walls'][j]['t_collision'])
                     # if collision:
@@ -411,7 +378,7 @@ for filename in fileList:
                     #     sys.exit(0)
 
             if i == 0:
-                datastore[i]['goal'][0]['t_collision'] = -1.
+                datastore[i]['goal'][0]['t_collision'] = math.inf
             else:
                 point1 = Point(datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'])
                 circle1 = point1.buffer(ENTITY_RADIUS)
@@ -433,7 +400,7 @@ for filename in fileList:
                 if t+1 < TOTAL_DIVISIONS:
                     datastore[i]['goal'][0]['t_collision'] = (t + 1) * time_inc
                 else:
-                    datastore[i]['goal'][0]['t_collision'] = -1.
+                    datastore[i]['goal'][0]['t_collision'] = math.inf
 
 
             # Plot the whole scenario
