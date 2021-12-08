@@ -1469,13 +1469,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             edge_features_1[o_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_1[o_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_1[o_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_1[o_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = o['t_collision']
+            edge_features_1[o_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = math.tanh(o['t_collision']/3)
 
             rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, orientation))
             edge_features_2[o_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_2[o_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_2[o_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_2[o_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = o['t_collision']
+            edge_features_2[o_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = math.tanh(o['t_collision']/3)
 
             if last_frame:
                 edge_feats_list.append(edge_features_1[o_id])
@@ -1535,13 +1535,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             edge_features_1[h_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_1[h_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_1[h_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_1[h_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = h['t_collision']
+            edge_features_1[h_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = math.tanh(h['t_collision'])
 
             rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, orientation))
             edge_features_2[h_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_2[h_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_2[h_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_2[h_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = h['t_collision']
+            edge_features_2[h_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = math.tanh(h['t_collision'])
 
             if last_frame:
                 edge_feats_list.append(edge_features_1[h_id])
@@ -1596,15 +1596,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_features_1[goal_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
         edge_features_1[goal_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
         edge_features_1[goal_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-        edge_features_1[goal_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['goal'][0][
-            't_collision']
+        edge_features_1[goal_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = math.tanh(data['goal'][0]['t_collision'])
 
         rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, 0))
         edge_features_2[goal_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
         edge_features_2[goal_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
         edge_features_2[goal_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-        edge_features_2[goal_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['goal'][0][
-            't_collision']
+        edge_features_2[goal_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = math.tanh(data['goal'][0]['t_collision'])
 
         if last_frame:
             edge_feats_list.append(edge_features_1[goal_id])
@@ -1714,7 +1712,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_features[all_edge_features.index('x' + t_tag[0])] = rx
         edge_features[all_edge_features.index('y' + t_tag[0])] = ry
         edge_features[all_edge_features.index('orientation' + t_tag[0])] = ra
-        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = 1.
+        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = math.inf
         edge_feats_list.append(edge_features)
 
         rx, ry, ra = calculate_relative_position(entity1=(x_dst, y_dst, a_dst), entity2=(x_src, y_src, a_src))
@@ -1724,7 +1722,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_features[all_edge_features.index('x' + t_tag[0])] = rx
         edge_features[all_edge_features.index('y' + t_tag[0])] = ry
         edge_features[all_edge_features.index('orientation' + t_tag[0])] = ra
-        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = 1.
+        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = math.inf
         edge_feats_list.append(edge_features)
 
     # self edges
