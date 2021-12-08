@@ -249,11 +249,20 @@ for filename in fileList:
                         circle1 = point1.buffer(ENTITY_RADIUS)
                         circle2 = point2.buffer(ENTITY_RADIUS)
 
+                        if t != 0:
+                            dist1 = math.sqrt((ex_p[t] - ex_p[t-1])**2 + (ey_p[t] - ey_p[t-1])**2)
+                            dist2 = math.sqrt((ex_r[t] - ex_r[t-1]) ** 2 + (ey_r[t] - ey_r[t-1]) ** 2)
+                            if dist1 > 2.5 * ENTITY_RADIUS or dist2 > 2.5 * ENTITY_RADIUS:
+                                line1 = LineString([point1, Point(ex_p[t-1], ey_p[t-1])])
+                                line2 = LineString([point2, Point(ex_r[t-1], ey_r[t-1])])
+                                if line1.intersects(line2):
+                                    collision = True
+
                         if circle1.intersects(circle2):
                             collision = True
-                            collision_coords.append([ex_r[t], ey_r[t]])
 
                         if collision:
+                            collision_coords.append([ex_r[t], ey_r[t]])
                             break
 
                     if t+1 < TOTAL_DIVISIONS:
