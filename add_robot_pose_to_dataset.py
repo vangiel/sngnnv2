@@ -6,7 +6,7 @@ import numpy as np
 import copy
 from pathlib import Path
 from scipy.interpolate import splprep, splev
-from shapely.geometry import Point, LineString, box, Polygon
+from shapely.geometry import Point, LineString
 import matplotlib.pyplot as plt
 from collections import deque
 
@@ -243,23 +243,24 @@ for filename in fileList:
                     entity_coords.append([x_p, y_p])
 
                     collision = False
-                    for t in range(TOTAL_DIVISIONS):
+                    for t in range(1, TOTAL_DIVISIONS):
                         point1 = Point(ex_p[t], ey_p[t])
                         point2 = Point(ex_r[t], ey_r[t])
-                        circle1 = point1.buffer(ENTITY_RADIUS)
-                        circle2 = point2.buffer(ENTITY_RADIUS)
 
-                        if t != 0:
-                            dist1 = math.sqrt((ex_p[t] - ex_p[t-1])**2 + (ey_p[t] - ey_p[t-1])**2)
-                            dist2 = math.sqrt((ex_r[t] - ex_r[t-1]) ** 2 + (ey_r[t] - ey_r[t-1]) ** 2)
-                            if dist1 > 2.5 * ENTITY_RADIUS or dist2 > 2.5 * ENTITY_RADIUS:
-                                line1 = LineString([point1, Point(ex_p[t-1], ey_p[t-1])])
-                                line2 = LineString([point2, Point(ex_r[t-1], ey_r[t-1])])
-                                if line1.intersects(line2):
-                                    collision = True
+                        dist1 = math.sqrt((ex_p[t] - ex_p[t-1]) ** 2 + (ey_p[t] - ey_p[t-1]) ** 2)
+                        dist2 = math.sqrt((ex_r[t] - ex_r[t-1]) ** 2 + (ey_r[t] - ey_r[t-1]) ** 2)
 
-                        if circle1.intersects(circle2):
-                            collision = True
+                        if dist1 > 2.5 * ENTITY_RADIUS or dist2 > 2.5 * ENTITY_RADIUS:
+                            line1 = LineString([point1, Point(ex_p[t-1], ey_p[t-1])])
+                            line2 = LineString([point2, Point(ex_r[t-1], ey_r[t-1])])
+                            if line1.intersects(line2):
+                                collision = True
+
+                        else:
+                            circle1 = point1.buffer(ENTITY_RADIUS)
+                            circle2 = point2.buffer(ENTITY_RADIUS)
+                            if circle1.intersects(circle2):
+                                collision = True
 
                         if collision:
                             collision_coords.append([ex_r[t], ey_r[t]])
@@ -301,21 +302,28 @@ for filename in fileList:
                     datastore[i]['objects'][j]['t_collision'] = math.inf
                 else:
                     point1 = Point(o['x'], o['y'])
-                    circle1 = point1.buffer(ENTITY_RADIUS)
 
                     entity_splines.append([o['x'], o['y'], 'o'])
                     entity_coords.append([o['x'], o['y']])
 
                     collision = False
-                    for t in range(TOTAL_DIVISIONS):
+                    for t in range(1, TOTAL_DIVISIONS):
                         point2 = Point(ex_r[t], ey_r[t])
-                        circle2 = point2.buffer(ENTITY_RADIUS)
+                        dist = math.sqrt((ex_r[t] - ex_r[t - 1]) ** 2 + (ey_r[t] - ey_r[t - 1]) ** 2)
 
-                        if circle1.intersects(circle2):
-                            collision = True
-                            collision_coords.append([ex_r[t], ey_r[t]])
+                        if dist > 2.5 * ENTITY_RADIUS:
+                            circle = point1.buffer(ENTITY_RADIUS).boundary
+                            line = LineString([point2, Point(ex_r[t - 1], ey_r[t - 1])])
+                            if circle.intersection(line):
+                                collision = True
+                        else:
+                            circle1 = point1.buffer(ENTITY_RADIUS)
+                            circle2 = point2.buffer(ENTITY_RADIUS)
+                            if circle1.intersects(circle2):
+                                collision = True
 
                         if collision:
+                            collision_coords.append([ex_r[t], ey_r[t]])
                             break
 
                     if t+1 < TOTAL_DIVISIONS:
@@ -347,13 +355,20 @@ for filename in fileList:
                     lineSegmentRight = lineSegment.parallel_offset(0.15, 'right')
 
                     collision = False
-                    for t in range(len(ex_r)):
+                    for t in range(1, len(ex_r)):
                         point1 = Point(ex_r[t], ey_r[t])
-                        circle1 = point1.buffer(ENTITY_RADIUS)
-                        if circle1.intersects(lineSegment) or circle1.intersects(lineSegmentLeft) or\
-                                circle1.intersects(lineSegmentRight):
-                            collision = True
-                            collision_coords.append([ex_r[t], ey_r[t]])
+                        dist = math.sqrt((ex_r[t] - ex_r[t - 1]) ** 2 + (ey_r[t] - ey_r[t - 1]) ** 2)
+
+                        if dist > 2.5 * ENTITY_RADIUS:
+                            line = LineString([point1, Point(ex_r[t - 1], ey_r[t - 1])])
+                            if line.intersects(lineSegment) or line.intersects(lineSegmentLeft) or\
+                                    line.intersects(lineSegmentRight):
+                                collision = True
+                        else:
+                            circle1 = point1.buffer(ENTITY_RADIUS)
+                            if circle1.intersects(lineSegment) or circle1.intersects(lineSegmentLeft) or\
+                                    circle1.intersects(lineSegmentRight):
+                                collision = True
 
                         # for idx in range(len(ex_w)):
                         #     point2 = Point(ex_w[idx], ey_w[idx])
@@ -365,6 +380,7 @@ for filename in fileList:
                         #         break
 
                         if collision:
+                            collision_coords.append([ex_r[t], ey_r[t]])
                             break
 
                     if t+1 < TOTAL_DIVISIONS:
@@ -390,20 +406,27 @@ for filename in fileList:
                 datastore[i]['goal'][0]['t_collision'] = math.inf
             else:
                 point1 = Point(datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'])
-                circle1 = point1.buffer(ENTITY_RADIUS)
                 entity_splines.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'], 't'])
                 entity_coords.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y']])
 
                 collision = False
                 for t in range(TOTAL_DIVISIONS):
                     point2 = Point(ex_r[t], ey_r[t])
-                    circle2 = point2.buffer(ENTITY_RADIUS)
+                    dist = math.sqrt((ex_r[t] - ex_r[t - 1]) ** 2 + (ey_r[t] - ey_r[t - 1]) ** 2)
 
-                    if circle1.intersects(circle2):
-                        collision = True
-                        collision_coords.append([ex_r[t], ey_r[t]])
+                    if dist > 2.5 * ENTITY_RADIUS:
+                        circle = point1.buffer(ENTITY_RADIUS).boundary
+                        line = LineString([point2, Point(ex_r[t - 1], ey_r[t - 1])])
+                        if circle.intersection(line):
+                            collision = True
+                    else:
+                        circle1 = point1.buffer(ENTITY_RADIUS)
+                        circle2 = point2.buffer(ENTITY_RADIUS)
+                        if circle1.intersects(circle2):
+                            collision = True
 
                     if collision:
+                        collision_coords.append([ex_r[t], ey_r[t]])
                         break
 
                 if t+1 < TOTAL_DIVISIONS:
