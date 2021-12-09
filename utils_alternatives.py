@@ -28,6 +28,19 @@ MAX_ROT = 4.
 MAX_HUMANS = 15
 
 
+# Transformation matrix
+def get_transformation_matrix_for_pose(x, z, angle):
+    M = np.zeros((3, 3))
+    M[0][0] = +math.cos(-angle)
+    M[0][1] = -math.sin(-angle)
+    M[0][2] = x
+    M[1][0] = +math.sin(-angle)
+    M[1][1] = +math.cos(-angle)
+    M[1][2] = z
+    M[2][2] = 1.0
+    return M
+
+
 #  human to wall distance
 def dist_h_w(h, wall):
     if 'xPos' in h.keys():
@@ -62,12 +75,17 @@ def central_grid_nodes(alt, r):
         return []
 
 
-# TODO: finish this function
 def calculate_relative_position(entity1, entity2):
     x1, y1, a1 = entity1
     x2, y2, a2 = entity2
 
-    return x1, x2, a2
+    ang = a1 - a2
+
+    p = np.array([[x2], [y2], [1.0]], dtype=float)
+    M = get_transformation_matrix_for_pose(x1, x2, a1)
+    p = M.dot(p)
+
+    return -p[0][0], -p[1][0], ang
 
 
 # Calculate the closet node in the grid to a given node by its coordinates
