@@ -437,25 +437,25 @@ for filename in fileList:
 
 
             # Plot the whole scenario
-            colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
-            for e in entity_splines:
-                plt.plot(e[0], e[1], colour[e[2]])
-            for e in entity_coords:
-                plt.plot(e[0], e[1], 'yd')
-            for c in collision_coords:
-                plt.plot(c[0], c[1], 'ko')
-            
-            plt.title("Frame " + str(i))
-            max_x = max_y = min_x = min_y = 0.
-            for w in datastore_absolute[i]['walls']:
-                plt.plot([w['x1'], w['x2']], [w['y1'], w['y2']], 'm')
-                max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
-                max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
-                min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
-                min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
-            
-            plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
-            plt.show()
+            # colour = {'p': 'bo', 'o': 'go', 'r': 'co', 't': 'ro', 'w': 'mo'}
+            # for e in entity_splines:
+            #     plt.plot(e[0], e[1], colour[e[2]])
+            # for e in entity_coords:
+            #     plt.plot(e[0], e[1], 'yd')
+            # for c in collision_coords:
+            #     plt.plot(c[0], c[1], 'ko')
+            #
+            # plt.title("Frame " + str(i))
+            # max_x = max_y = min_x = min_y = 0.
+            # for w in datastore_absolute[i]['walls']:
+            #     plt.plot([w['x1'], w['x2']], [w['y1'], w['y2']], 'm')
+            #     max_x = max(w['x1'], w['x2']) if max(w['x1'], w['x2']) > max_x else max_x
+            #     max_y = max(w['y1'], w['y2']) if max(w['y1'], w['y2']) > max_y else max_y
+            #     min_x = min(w['x1'], w['x2']) if min(w['x1'], w['x2']) < min_x else min_x
+            #     min_y = min(w['y1'], w['y2']) if min(w['y1'], w['y2']) < min_x else min_x
+            #
+            # plt.axis([min_x - 1, max_x + 1, min_y - 1, max_y + 1])
+            # plt.show()
 
         datastore = list(reversed(datastore))
         datastore_absolute = list(reversed(datastore_absolute))
