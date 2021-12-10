@@ -18,6 +18,7 @@ DIST_THRESHOLD = 0.2
 TOTAL_DIVISIONS = 30
 EXTRAPOLATION_FACTOR = .2
 
+
 def get_transformation_matrix_for_pose(x, z, angle):
     M = np.zeros((3, 3))
     M[0][0] = +math.cos(-angle)

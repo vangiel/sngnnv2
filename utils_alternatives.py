@@ -31,11 +31,11 @@ MAX_HUMANS = 15
 # Transformation matrix
 def get_transformation_matrix_for_pose(x, z, angle):
     M = np.zeros((3, 3))
-    M[0][0] = +math.cos(-angle)
-    M[0][1] = -math.sin(-angle)
+    M[0][0] = +math.cos(angle)
+    M[0][1] = -math.sin(angle)
     M[0][2] = x
-    M[1][0] = +math.sin(-angle)
-    M[1][1] = +math.cos(-angle)
+    M[1][0] = +math.sin(angle)
+    M[1][1] = +math.cos(angle)
     M[1][2] = z
     M[2][2] = 1.0
     return M
@@ -83,7 +83,7 @@ def calculate_relative_position(entity1, entity2):
     ang = math.atan2(math.sin(ang), math.cos(ang))
 
     p = np.array([[x2], [y2], [1.0]], dtype=float)
-    M = get_transformation_matrix_for_pose(x1, x2, a1)
+    M = np.linalg.inv(get_transformation_matrix_for_pose(x1, y1, a1))
     p = M.dot(p)
 
     return p[0][0], p[1][0], ang
