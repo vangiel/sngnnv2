@@ -31,11 +31,11 @@ MAX_HUMANS = 15
 # Transformation matrix
 def get_transformation_matrix_for_pose(x, z, angle):
     M = np.zeros((3, 3))
-    M[0][0] = +math.cos(angle)
-    M[0][1] = -math.sin(angle)
+    M[0][0] = +math.cos(-angle)
+    M[0][1] = -math.sin(-angle)
     M[0][2] = x
-    M[1][0] = +math.sin(angle)
-    M[1][1] = +math.cos(angle)
+    M[1][0] = +math.sin(-angle)
+    M[1][1] = +math.cos(-angle)
     M[1][2] = z
     M[2][2] = 1.0
     return M
