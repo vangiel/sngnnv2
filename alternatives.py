@@ -1657,13 +1657,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             edge_features_1[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_1[wall_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_1[wall_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_1[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][wall_index[i_w]]['t_collision']
+            edge_features_1[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][wall_index[iw]]['t_collision']
 
             rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, 0))
             edge_features_2[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_2[wall_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_2[wall_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_2[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][wall_index[i_w]]['t_collision']
+            edge_features_2[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][wall_index[iw]]['t_collision']
 
             if last_frame:
                 edge_feats_list.append(edge_features_1[wall_id])
