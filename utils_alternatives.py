@@ -531,6 +531,7 @@ def generate_walls_information(data, w_segments):
     # Compute data for walls
     walls = []
     i_w = 0
+    wall_index = []
     for wall_segment in data['walls']:
         p1 = np.array([wall_segment["x1"], wall_segment["y1"]]) * 100
         p2 = np.array([wall_segment["x2"], wall_segment["y2"]]) * 100
@@ -546,12 +547,14 @@ def generate_walls_information(data, w_segments):
                 inc2 = pb - pa
                 midsp = (pa + pb) / 2
                 walls.append(Wall(math.atan2(inc2[0], inc2[1]), midsp[0], midsp[1]))
+                wall_index.append(i_w)
         else:
             inc = p2 - p1
             midp = (p2 + p1) / 2
             walls.append(Wall(math.atan2(inc[0], inc[1]), midp[0], midp[1]))
+            wall_index.append(i_w)
         i_w += 1
-    return walls, w_segments
+    return walls, w_segments, wall_index
 
 
 def update_node_features(graphs, w_segments, data, ini_node, final_node, ini_edge, final_edge):

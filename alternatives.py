@@ -1123,7 +1123,7 @@ def initializeAlt6(data_sequence, alt='6', w_segments=[]):
     n_nodes = 1 + len(data_sequence[0]['people']) + 1
 
     if alt == '7':
-        walls, w_segments = generate_walls_information(data_sequence[0], w_segments)
+        walls, w_segments, _ = generate_walls_information(data_sequence[0], w_segments)
         n_nodes += len(walls)
 
     # Feature dimensions
@@ -1276,7 +1276,7 @@ def initializeAlt6(data_sequence, alt='6', w_segments=[]):
         # Walls
         if alt == '7':
             if not first_frame:
-                walls, w_segments = generate_walls_information(data, w_segments)
+                walls, w_segments, _ = generate_walls_information(data, w_segments)
 
             for wall in walls:
                 wall_id = max_used_id
@@ -1363,7 +1363,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
     # one for the robot  + humans  + one for the goal
     n_nodes = 1 + len(data_sequence[0]['people']) + len(data_sequence[0]['objects']) + 1
 
-    walls, w_segments = generate_walls_information(data_sequence[0], w_segments)
+    walls, w_segments, wall_index = generate_walls_information(data_sequence[0], w_segments)
     n_nodes += len(walls)
 
     # Feature dimensions
@@ -1621,9 +1621,9 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
         # Walls
         if not first_frame:
-            walls, w_segments = generate_walls_information(data, w_segments)
+            walls, w_segments, wall_index = generate_walls_information(data, w_segments)
 
-        for wall in walls:
+        for iw, wall in enumerate(walls):
             wall_id = max_used_id
             max_used_id += 1
 
@@ -1657,13 +1657,13 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
             edge_features_1[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_1[wall_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_1[wall_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_1[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][0]['t_collision']
+            edge_features_1[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][wall_index[i_w]]['t_collision']
 
             rx, ry, ra = calculate_relative_position(entity1=(0, 0, 0), entity2=(xpos, ypos, 0))
             edge_features_2[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
             edge_features_2[wall_id][all_edge_features.index('y' + t_tag[n_instants])] = ry
             edge_features_2[wall_id][all_edge_features.index('orientation' + t_tag[n_instants])] = ra
-            edge_features_2[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][0]['t_collision']
+            edge_features_2[wall_id][all_edge_features.index('t_collision' + t_tag[n_instants])] = data['walls'][wall_index[i_w]]['t_collision']
 
             if last_frame:
                 edge_feats_list.append(edge_features_1[wall_id])
