@@ -1370,8 +1370,8 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
     all_features, n_features = get_features(alt)
     all_edge_features, n_edge_features = get_edge_features(alt)
     # print(all_features, n_features)
-    edge_features_1 = []
-    edge_features_2 = []
+    edge_features_1 = th.zeros(n_nodes, n_edge_features) #[]
+    edge_features_2 = th.zeros(n_nodes, n_edge_features) #[]
     features = th.zeros(n_nodes, n_features)
     edge_feats_list = []
 

@@ -86,6 +86,7 @@ class SocNavDataset(DGLDataset):
 
     def generate_final_graph(self, raw_data):
         rels, num_rels = get_relations(self.alt)
+        all_edge_features, n_edge_features = get_edge_features(self.alt)
         room_graph_data = graphData(*self.dataloader(raw_data, self.alt))
         if self.grid_data is not None:
             # Merge room and grid graph
@@ -100,7 +101,7 @@ class SocNavDataset(DGLDataset):
             # Link each node in the room graph to the correspondent grid graph.
             for r_n_id in range(0, room_graph_data.n_nodes):
                 r_n_type = room_graph_data.typeMap[r_n_id]
-                x, y = room_graph_data.position_by_id[r_n_id]
+                x, y, _ = room_graph_data.position_by_id[r_n_id]
                 closest_grid_nodes_id = closest_grid_nodes(self.grid_data.labels, area_width, grid_width, area_width, x * 10000, y * 10000)
                 # closest_grid_nodes_id = [closest_grid_node(self.grid_data.labels,area_width, grid_width, x * 10000, y * 10000)]
                 for g_id in closest_grid_nodes_id:
@@ -110,9 +111,9 @@ class SocNavDataset(DGLDataset):
                         edge_types = th.cat([edge_types, th.LongTensor([rels.index('g_' + r_n_type)])], dim=0)
                         edge_norms = th.cat([edge_norms, th.Tensor([[1.]])])
                         if WITH_EDGE_FEATURES:
-                            new_edge_features = th.zeros(num_rels + 4)
-                            new_edge_features[rels.index('g_'+ r_n_type)] = 1
-                            # new_edge_features[-1] = dist
+                            new_edge_features = th.zeros(n_edge_features)
+                            new_edge_features[all_edge_features.index('g_'+ r_n_type)] = 1
+                            # new_edge_features[all_edge_features.index('nodes_dist')] = dist
                             edge_feats_list.append(new_edge_features)
 
 
@@ -121,9 +122,9 @@ class SocNavDataset(DGLDataset):
                         edge_types = th.cat([edge_types, th.LongTensor([rels.index(r_n_type + '_g')])], dim=0)
                         edge_norms = th.cat([edge_norms, th.Tensor([[1.]])])
                         if WITH_EDGE_FEATURES:
-                            new_edge_features = th.zeros(num_rels + 4)
-                            new_edge_features[rels.index(r_n_type + '_g')] = 1
-                            # new_edge_features[-1] = dist
+                            new_edge_features = th.zeros(n_edge_features)
+                            new_edge_features[all_edge_features.index(r_n_type + '_g')] = 1
+                            # new_edge_features[all_edge_features.index('nodes_dist')] = dist
                             edge_feats_list.append(new_edge_features)
 
 
