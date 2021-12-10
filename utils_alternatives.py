@@ -79,13 +79,14 @@ def calculate_relative_position(entity1, entity2):
     x1, y1, a1 = entity1
     x2, y2, a2 = entity2
 
-    ang = a1 - a2
+    ang = a2 - a1
+    ang = math.atan2(math.sin(ang), math.cos(ang))
 
     p = np.array([[x2], [y2], [1.0]], dtype=float)
     M = get_transformation_matrix_for_pose(x1, x2, a1)
     p = M.dot(p)
 
-    return -p[0][0], -p[1][0], ang
+    return p[0][0], p[1][0], ang
 
 
 # Calculate the closet node in the grid to a given node by its coordinates
