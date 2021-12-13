@@ -127,8 +127,8 @@ class SocNavDataset(DGLDataset):
                         if WITH_EDGE_FEATURES:
                             new_edge_features = th.zeros(n_edge_features)
                             new_edge_features[all_edge_features.index(r_n_type + '_g')] = 1
-                            new_edge_features[all_edge_features.index('delta_x')] = (x_g - x)/grid_distance
-                            new_edge_features[all_edge_features.index('delta_y')] = (y_g - y)/grid_distance
+                            new_edge_features[all_edge_features.index('delta_x')] = (x - x_g)/grid_distance
+                            new_edge_features[all_edge_features.index('delta_y')] = (y - y_g)/grid_distance
                             edge_feats_list.append(new_edge_features)
 
 
