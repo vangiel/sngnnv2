@@ -27,7 +27,6 @@ import torch.nn.functional as F
 # from pg_rgcn import PRGCN
 # from pg_rgcn_gat import PRGAT
 from torch.utils.data import DataLoader
-from torch_geometric.data import Data
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 
@@ -128,7 +127,7 @@ def main(training_file, dev_file, test_file, task, previous_model=None):
     alpha = task['alpha']
     attn_drop = task['attn_drop']
     num_bases = task['num_bases']
-    _, num_rels = socnav.get_relations()
+    _, num_rels = socnav.get_relations(graph_type)
     num_rels += (socnav.N_INTERVALS - 1) * 2
     if num_bases < 1:
         num_bases = num_rels
@@ -171,11 +170,11 @@ def main(training_file, dev_file, test_file, task, previous_model=None):
     # create the dataset
     time_dataset_a = time.time()
     print('Loading training set...')
-    train_dataset = socnav.SocNavDataset(training_file, mode='train', alt=graph_type, raw_dir='raw_data')
+    train_dataset = socnav.SocNavDataset(training_file, mode='train', alt=graph_type, raw_dir='raw_data/')
     print('Loading dev set...')
-    valid_dataset = socnav.SocNavDataset(dev_file, mode='valid', alt=graph_type, raw_dir='raw_data')
+    valid_dataset = socnav.SocNavDataset(dev_file, mode='valid', alt=graph_type, raw_dir='raw_data/')
     print('Loading test set...')
-    test_dataset = socnav.SocNavDataset(test_file, mode='test', alt=graph_type, raw_dir='raw_data')
+    test_dataset = socnav.SocNavDataset(test_file, mode='test', alt=graph_type, raw_dir='raw_data/')
     print('Done loading files')
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate)
     valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, collate_fn=collate)

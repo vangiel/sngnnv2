@@ -9,7 +9,6 @@ import random
 import signal
 import torch.nn.functional as F
 from torch.utils.data import DataLoader
-from torch_geometric.data import Data
 # from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 import socnav
@@ -119,11 +118,11 @@ def main(training_file, dev_file, test_file, graph_type=None, net=None, epochs=N
     # create the dataset
     time_dataset_a = time.time()
     print('Loading training set...')
-    train_dataset = socnav.SocNavDataset(training_file, mode='train', alt=graph_type, raw_dir='raw_data')
+    train_dataset = socnav.SocNavDataset(training_file, mode='train', alt=graph_type, raw_dir='raw_data/')
     print('Loading dev set...')
-    valid_dataset = socnav.SocNavDataset(dev_file, mode='valid', alt=graph_type, raw_dir='raw_data')
+    valid_dataset = socnav.SocNavDataset(dev_file, mode='valid', alt=graph_type, raw_dir='raw_data/')
     print('Loading test set...')
-    test_dataset = socnav.SocNavDataset(test_file, mode='valid', alt=graph_type, raw_dir='raw_data')
+    test_dataset = socnav.SocNavDataset(test_file, mode='valid', alt=graph_type, raw_dir='raw_data/')
     print('Done loading files')
     train_dataloader = DataLoader(train_dataset, batch_size=batch_size, collate_fn=collate)
     valid_dataloader = DataLoader(valid_dataset, batch_size=batch_size, collate_fn=collate)
@@ -132,7 +131,7 @@ def main(training_file, dev_file, test_file, graph_type=None, net=None, epochs=N
     # for _ in range(5):
     #     print(f'TIME {time_dataset_b - time_dataset_a}')
 
-    _, num_rels = socnav.get_relations()
+    _, num_rels = socnav.get_relations(graph_type)
     num_rels += (socnav.N_INTERVALS - 1) * 2
     cur_step = 0
     best_loss = -1
@@ -314,7 +313,7 @@ if __name__ == '__main__':
     if not retrain:
         print("If you want to retrain, use \"python3 train.py file.prms file.tch\"")
         best_loss = main('train_set.txt', 'dev_set.txt', 'test_set.txt',
-                         graph_type='1',
+                         graph_type='8',
                          net='mpnn',
                          epochs=1000,
                          patience=6,

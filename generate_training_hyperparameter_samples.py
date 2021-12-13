@@ -81,10 +81,11 @@ def print_best_options(list_of_tasks):
 
 
 def get_random_hyperparameters(identifier):
-    fw_net_map = {0: ('dgl', 'rgcn'), 1: ('dgl', 'gat'), 2: ('dgl', 'mpnn')}
+    # fw_net_map = {0: ('dgl', 'rgcn'), 1: ('dgl', 'gat'), 2: ('dgl', 'mpnn')}
+    fw_net_map = {0: ('dgl', 'mpnn')}
     fw, net = fw_net_map[randrange(len(fw_net_map))]
     gnn_network = net
-    graph_type = '1'
+    graph_type = '8'
     gnn_layers = randrange(start=5, stop=9)
     last_gnn_units = randrange(start=2, stop=20)
     first_gnn_units = randrange(start=20, stop=90)
