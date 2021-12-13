@@ -1651,7 +1651,6 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
                 edge_features_2[wall_id] = th.zeros(n_edge_features)
                 edge_features_2[wall_id][all_edge_features.index('r_w')] = 1.
 
-            # TODO: Add the correct time to collision to the wall segments!!
             # Edge features
             rx, ry, ra = calculate_relative_position(entity1=(xpos, ypos, 0), entity2=(0, 0, 0))
             edge_features_1[wall_id][all_edge_features.index('x' + t_tag[n_instants])] = rx
@@ -1715,7 +1714,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_features[all_edge_features.index('x' + t_tag[0])] = rx
         edge_features[all_edge_features.index('y' + t_tag[0])] = ry
         edge_features[all_edge_features.index('orientation' + t_tag[0])] = ra
-        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = math.inf
+        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = 1.
         edge_feats_list.append(edge_features)
 
         rx, ry, ra = calculate_relative_position(entity1=(x_dst, y_dst, a_dst), entity2=(x_src, y_src, a_src))
@@ -1725,7 +1724,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
         edge_features[all_edge_features.index('x' + t_tag[0])] = rx
         edge_features[all_edge_features.index('y' + t_tag[0])] = ry
         edge_features[all_edge_features.index('orientation' + t_tag[0])] = ra
-        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = math.inf
+        edge_features[all_edge_features.index('t_collision' + t_tag[0])] = 1.
         edge_feats_list.append(edge_features)
 
     # self edges

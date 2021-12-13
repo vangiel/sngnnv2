@@ -14,7 +14,8 @@ WITH_EDGE_FEATURES = True
 
 grid_width = 11  # 30 #18
 output_width = 73  # 121 #73
-area_width = 1000.  # horizontal/vertical distance between two contiguous nodes of the grid. Previously it was taken as the spatial area of the grid
+area_width = 1000.  # horizontal/vertical distance between two contiguous nodes of the grid. Previously it was taken
+# as the spatial area of the grid
 
 threshold_human_wall = 1.5
 limit = 2  # 50000  # Limit of graphs to load
@@ -379,7 +380,7 @@ def get_edge_features(alt):
     rels, _ = get_relations(alt)
     edge_types_one_hot = ['wandering_human_interacting', 'two_static_person_talking', 'human_laptop_interaction',
                           'human_plant_interaction']
-    all_features += time_features + rels + edge_types_one_hot + ['nodes_dist']
+    all_features += time_features + rels + edge_types_one_hot + ['delta_x', 'delta_y']
     n_features = len(all_features)
 
     return all_features, n_features
@@ -423,7 +424,6 @@ def generate_grid_graph_data(alt='2'):
             edge_norms.append([1.])
             edge_features = th.zeros(n_edge_features)
             edge_features[all_edge_features.index('g_c')] = 1
-            edge_features[all_edge_features.index('nodes_dist')] = 0
             edge_feats_list.append(edge_features)
 
             if x < grid_width - 1:
@@ -433,7 +433,8 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_ri')] = 1
-                edge_features[all_edge_features.index('nodes_dist')] = 1.
+                edge_features[all_edge_features.index('delta_x')] = 1.
+                edge_features[all_edge_features.index('delta_y')] = 0.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and y > 0:
@@ -443,7 +444,8 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_uri')] = 1
-                    edge_features[all_edge_features.index('nodes_dist')] = math.sqrt(2.)
+                    edge_features[all_edge_features.index('delta_x')] = 1.
+                    edge_features[all_edge_features.index('delta_y')] = 1.
                     edge_feats_list.append(edge_features)
 
             if x > 0:
@@ -453,7 +455,8 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_le')] = 1
-                edge_features[all_edge_features.index('nodes_dist')] = 1.
+                edge_features[all_edge_features.index('delta_x')] = -1.
+                edge_features[all_edge_features.index('delta_y')] = 0.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and y < grid_width - 1:
@@ -463,7 +466,8 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_dle')] = 1
-                    edge_features[all_edge_features.index('nodes_dist')] = math.sqrt(2.)
+                    edge_features[all_edge_features.index('delta_x')] = -1.
+                    edge_features[all_edge_features.index('delta_y')] = -1.
                     edge_feats_list.append(edge_features)
 
             if y < grid_width - 1:
@@ -473,7 +477,8 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_d')] = 1
-                edge_features[all_edge_features.index('nodes_dist')] = 1.
+                edge_features[all_edge_features.index('delta_x')] = 0.
+                edge_features[all_edge_features.index('delta_y')] = -1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and x < grid_width - 1:
@@ -483,7 +488,8 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_dri')] = 1
-                    edge_features[all_edge_features.index('nodes_dist')] = math.sqrt(2.)
+                    edge_features[all_edge_features.index('delta_x')] = 1.
+                    edge_features[all_edge_features.index('delta_y')] = -1.
                     edge_feats_list.append(edge_features)
 
             if y > 0:
@@ -493,7 +499,8 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_u')] = 1
-                edge_features[all_edge_features.index('nodes_dist')] = 1.
+                edge_features[all_edge_features.index('delta_x')] = 0.
+                edge_features[all_edge_features.index('delta_y')] = 1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and x > 0:
@@ -503,7 +510,8 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_ule')] = 1
-                    edge_features[all_edge_features.index('nodes_dist')] = math.sqrt(2.)
+                    edge_features[all_edge_features.index('delta_x')] = -1.
+                    edge_features[all_edge_features.index('delta_y')] = 1.
                     edge_feats_list.append(edge_features)
 
             typeMap[node_id] = 'g'  # 'g' for 'grid'

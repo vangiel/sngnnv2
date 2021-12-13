@@ -102,10 +102,12 @@ class SocNavDataset(DGLDataset):
             for r_n_id in range(0, room_graph_data.n_nodes):
                 r_n_type = room_graph_data.typeMap[r_n_id]
                 x, y, _ = room_graph_data.position_by_id[r_n_id]
+                grid_distance = area_width / grid_width
                 closest_grid_nodes_id = closest_grid_nodes(self.grid_data.labels, area_width, grid_width, area_width, x * 10000, y * 10000)
                 # closest_grid_nodes_id = [closest_grid_node(self.grid_data.labels,area_width, grid_width, x * 10000, y * 10000)]
                 for g_id in closest_grid_nodes_id:
                     if g_id is not None:
+                        x_g, y_g = self.grid_data.position_by_id[g_id]
                         src_nodes = th.cat([src_nodes, th.tensor([g_id], dtype=th.int32)], dim=0)
                         dst_nodes = th.cat([dst_nodes, th.tensor([r_n_id + self.grid_data.n_nodes], dtype=th.int32)], dim=0)
                         edge_types = th.cat([edge_types, th.LongTensor([rels.index('g_' + r_n_type)])], dim=0)
@@ -113,7 +115,8 @@ class SocNavDataset(DGLDataset):
                         if WITH_EDGE_FEATURES:
                             new_edge_features = th.zeros(n_edge_features)
                             new_edge_features[all_edge_features.index('g_'+ r_n_type)] = 1
-                            # new_edge_features[all_edge_features.index('nodes_dist')] = dist
+                            new_edge_features[all_edge_features.index('delta_x')] = (x_g - x)/grid_distance
+                            new_edge_features[all_edge_features.index('delta_y')] = (y_g - y)/grid_distance
                             edge_feats_list.append(new_edge_features)
 
 
@@ -124,7 +127,8 @@ class SocNavDataset(DGLDataset):
                         if WITH_EDGE_FEATURES:
                             new_edge_features = th.zeros(n_edge_features)
                             new_edge_features[all_edge_features.index(r_n_type + '_g')] = 1
-                            # new_edge_features[all_edge_features.index('nodes_dist')] = dist
+                            new_edge_features[all_edge_features.index('delta_x')] = (x_g - x)/grid_distance
+                            new_edge_features[all_edge_features.index('delta_y')] = (y_g - y)/grid_distance
                             edge_feats_list.append(new_edge_features)
 
 
