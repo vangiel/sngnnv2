@@ -86,8 +86,8 @@ def get_random_hyperparameters(identifier):
     fw, net = fw_net_map[randrange(len(fw_net_map))]
     gnn_network = net
     graph_type = '8'
-    gnn_layers = randrange(start=5, stop=9)
-    last_gnn_units = randrange(start=2, stop=20)
+    gnn_layers = randrange(start=2, stop=3)
+    last_gnn_units = randrange(start=6, stop=20)
     first_gnn_units = randrange(start=20, stop=90)
     gnn_units = [first_gnn_units]
 
