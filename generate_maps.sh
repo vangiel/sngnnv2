@@ -33,7 +33,7 @@ do
   python3 showcase.py "best_model" "$f" 150 &
   cp "$f" images_dataset/
 
-  if [ $COUNTER -eq 10 ]
+  if [ $COUNTER -eq 2 ]
   then
     echo 0 > $TEMPFILE
     wait

@@ -202,6 +202,7 @@ for filename in fileList:
                 # Calculate time to collision
                 if i == 0:
                     datastore[i]['people'][j]['t_collision'] = math.inf
+                    datastore_absolute[i]['people'][j]['t_collision'] = math.inf
                     p_q[j] = deque()
                     p_q[j].append([p['x'], p['y'], datastore[i]['timestamp']])
                 else:
@@ -270,8 +271,10 @@ for filename in fileList:
 
                     if t+1 < TOTAL_DIVISIONS:
                         datastore[i]['people'][j]['t_collision'] = (t+1) * time_inc
+                        datastore_absolute[i]['people'][j]['t_collision'] = (t+1) * time_inc
                     else:
                         datastore[i]['people'][j]['t_collision'] = math.inf
+                        datastore_absolute[i]['people'][j]['t_collision'] = math.inf
 
                     # print(datastore[i]['people'][j]['t_collision'])
                     # if collision:
@@ -302,6 +305,7 @@ for filename in fileList:
                 # Calculate time to collision
                 if i == 0:
                     datastore[i]['objects'][j]['t_collision'] = math.inf
+                    datastore_absolute[i]['objects'][j]['t_collision'] = math.inf
                 else:
                     point1 = Point(o['x'], o['y'])
 
@@ -330,8 +334,10 @@ for filename in fileList:
 
                     if t+1 < TOTAL_DIVISIONS:
                         datastore[i]['objects'][j]['t_collision'] = (t + 1) * time_inc
+                        datastore_absolute[i]['objects'][j]['t_collision'] = (t + 1) * time_inc
                     else:
                         datastore[i]['objects'][j]['t_collision'] = math.inf
+                        datastore_absolute[i]['objects'][j]['t_collision'] = math.inf
 
                     # print(datastore[i]['objects'][j]['t_collision'])
                     # if collision:
@@ -350,6 +356,7 @@ for filename in fileList:
             for j, w in enumerate(datastore_absolute[i]['walls']):
                 if i == 0:
                     datastore[i]['walls'][j]['t_collision'] = math.inf
+                    datastore_absolute[i]['walls'][j]['t_collision'] = math.inf
                 else:
 
                     lineSegment = LineString([Point(w['x1'], w['y1']), Point(w['x2'], w['y2'])])
@@ -387,8 +394,10 @@ for filename in fileList:
 
                     if t+1 < TOTAL_DIVISIONS:
                         datastore[i]['walls'][j]['t_collision'] = (t + 1) * time_inc
+                        datastore_absolute[i]['walls'][j]['t_collision'] = (t + 1) * time_inc
                     else:
                         datastore[i]['walls'][j]['t_collision'] = math.inf
+                        datastore_absolute[i]['walls'][j]['t_collision'] = math.inf
 
                     # print(datastore[i]['walls'][j]['t_collision'])
                     # if collision:
@@ -406,6 +415,7 @@ for filename in fileList:
 
             if i == 0:
                 datastore[i]['goal'][0]['t_collision'] = math.inf
+                datastore_absolute[i]['goal'][0]['t_collision'] = math.inf
             else:
                 point1 = Point(datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'])
                 entity_splines.append([datastore_absolute[i]['goal'][0]['x'], datastore_absolute[i]['goal'][0]['y'], 't'])
@@ -433,8 +443,10 @@ for filename in fileList:
 
                 if t+1 < TOTAL_DIVISIONS:
                     datastore[i]['goal'][0]['t_collision'] = (t + 1) * time_inc
+                    datastore_absolute[i]['goal'][0]['t_collision'] = (t + 1) * time_inc
                 else:
                     datastore[i]['goal'][0]['t_collision'] = math.inf
+                    datastore_absolute[i]['goal'][0]['t_collision'] = math.inf
 
 
             # Plot the whole scenario
@@ -465,9 +477,9 @@ for filename in fileList:
             json.dump(datastore, outfile, indent=4, sort_keys=True)
             outfile.close()
 
-        # with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
-        #     json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
-        #     outfile.close()
+        with open(dest_directory + '_absolute' + '/' + save, 'w') as outfile:
+            json.dump(datastore_absolute, outfile, indent=4, sort_keys=True)
+            outfile.close()
 
     # except BaseException as err:
     #     with open('jsons_problems.txt', 'a') as f:
