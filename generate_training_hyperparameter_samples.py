@@ -124,7 +124,7 @@ def get_random_hyperparameters(identifier):
         'num_gnn_layers': gnn_layers+1,
         'weight_decay': choice([0.000001, 0.00000001, 0.00000000001, 0.0, 0.0, 0.0, 0.0, 0.0]),
         'non-linearity': choice(['relu', 'elu']),
-        'final_activation': choice(['relu', 'tanh', 'sigmoid', None]),
+        'final_activation': choice(['relu', 'sigmoid']),
         'num_bases': choice([-1, -1, -1, -1, -1, 4, 8, 10, 16, 20]),
         'in_drop': choice([0.00001, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0]),
         'alpha': uniform(0.1, 0.3),

@@ -49,8 +49,8 @@ class SELECT_GNN(nn.Module):
         elif self.gnn_type == 'mpnn':
             # print("GNN being used is MPNN")
             self.gnn_object = self.mpnn()
-            self.fc1 = nn.Linear(self.n_classes, self.n_classes/2)
-            self.fc2 = nn.Linear(self.n_classes/2, 2)
+            self.fc1 = nn.Linear(self.n_classes, int(self.n_classes/2))
+            self.fc2 = nn.Linear(int(self.n_classes/2), 2)
 
     def rgcn(self):
         return RGCN(self.g, self.gnn_layers, self.num_features, self.n_classes, self.num_hidden, self.num_rels,
