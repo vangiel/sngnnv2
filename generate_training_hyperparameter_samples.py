@@ -86,8 +86,8 @@ def get_random_hyperparameters(identifier):
     fw, net = fw_net_map[randrange(len(fw_net_map))]
     gnn_network = net
     graph_type = '8'
-    gnn_layers = randrange(start=2, stop=3)
-    last_gnn_units = randrange(start=6, stop=20)
+    gnn_layers = randrange(start=5, stop=9)
+    last_gnn_units = randrange(start=2, stop=20)
     first_gnn_units = randrange(start=20, stop=90)
     gnn_units = [first_gnn_units]
 
@@ -124,7 +124,7 @@ def get_random_hyperparameters(identifier):
         'num_gnn_layers': gnn_layers+1,
         'weight_decay': choice([0.000001, 0.00000001, 0.00000000001, 0.0, 0.0, 0.0, 0.0, 0.0]),
         'non-linearity': choice(['relu', 'elu']),
-        'final_activation': choice(['relu', 'sigmoid']),
+        'final_activation': choice(['relu', 'tanh', 'sigmoid', None]),
         'num_bases': choice([-1, -1, -1, -1, -1, 4, 8, 10, 16, 20]),
         'in_drop': choice([0.00001, 0.000001, 0.0, 0.0, 0.0, 0.0, 0.0]),
         'alpha': uniform(0.1, 0.3),

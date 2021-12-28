@@ -49,8 +49,6 @@ class SELECT_GNN(nn.Module):
         elif self.gnn_type == 'mpnn':
             # print("GNN being used is MPNN")
             self.gnn_object = self.mpnn()
-            self.fc1 = nn.Linear(self.n_classes, int(self.n_classes/2))
-            self.fc2 = nn.Linear(int(self.n_classes/2), 2)
 
     def rgcn(self):
         return RGCN(self.g, self.gnn_layers, self.num_features, self.n_classes, self.num_hidden, self.num_rels,
@@ -76,9 +74,7 @@ class SELECT_GNN(nn.Module):
         output = torch.Tensor(size=(len(unbatched), 2))
         for g in unbatched:
             num_nodes = g.number_of_nodes()
-            x = self.activation(self.fc1(logits[base_index, :]))
-            x = self.final_activation(self.fc2(x))
-            output[batch_number, :] = x  # Output is just the room's node
+            output[batch_number, :] = logits[base_index, :]  # Output is just the room's node
             base_index += num_nodes
             batch_number += 1
         return output

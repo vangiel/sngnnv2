@@ -200,7 +200,7 @@ def main(training_file, dev_file, test_file, task, previous_model=None):
     # define the model
     model = SELECT_GNN(num_features=num_feats,
                        num_edge_feats=num_edge_feats,
-                       n_classes=num_hidden[-1],
+                       n_classes=2,
                        num_hidden=num_hidden,
                        gnn_layers=gnn_layers,
                        dropout=in_drop,
