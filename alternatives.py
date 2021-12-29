@@ -1363,6 +1363,336 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
     # one for the robot  + humans  + one for the goal
     n_nodes = 1 + len(data_sequence[0]['people']) + len(data_sequence[0]['objects']) + 1
 
+    walls, w_segments = generate_walls_information(data_sequence[0], w_segments)
+    n_nodes += len(walls)
+
+    # Feature dimensions
+    all_features, n_features = get_features(alt)
+    # print(all_features, n_features)
+    features = th.zeros(n_nodes, n_features)
+    edge_feats_list = []
+
+    # Nodes variables
+    typeMap = dict()
+    position_by_id = {}
+    src_nodes = []  # List to store source nodes
+    dst_nodes = []  # List to store destiny nodes
+
+    # Labels
+    if 'label_Q1' in data_sequence[0].keys():
+        labels = np.array([float(data_sequence[0]['label_Q1']), float(data_sequence[0]['label_Q2'])])
+    else:
+        labels = np.array([0, 0])
+    labels[0] = labels[0] / 100.
+    labels[1] = labels[1] / 100.
+
+    t_tag = ['']
+    for i in range(1, N_INTERVALS):
+        t_tag.append('_t' + str(i))
+
+    if 'step_fraction' in data_sequence[0].keys():
+        step_fraction = data_sequence[0]['step_fraction']
+    else:
+        step_fraction = 0
+
+    n_instants = 0
+    frames_in_interval = []
+    first_frame = True
+    for data in data_sequence:
+        if n_instants == N_INTERVALS:
+            break
+        if not first_frame and math.fabs(
+                data['timestamp'] - frames_in_interval[-1]['timestamp']) < FRAMES_INTERVAL:  # Truncated to N seconds
+            continue
+
+        if 'step_fraction' in data.keys():
+            step_fraction = data['step_fraction']
+        else:
+            step_fraction = 0
+
+        frames_in_interval.append(data)
+
+        max_used_id = 0  # Initialise id counter (0 for the robot)
+        # room (id 0)
+        room_id = 0
+
+        if first_frame:
+            typeMap[room_id] = 'r'  # 'r' for 'room'
+            position_by_id[room_id] = [0, 0]
+            features[room_id, all_features.index('room')] = 1.
+
+        features[room_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
+        features[room_id, all_features.index('robot_adv_vel' + t_tag[n_instants])] = data['command'][0] / MAX_ADV
+        features[room_id, all_features.index('robot_rot_vel' + t_tag[n_instants])] = data['command'][2] / MAX_ROT
+        features[room_id, all_features.index('t' + str(n_instants))] = 1.
+
+        max_used_id += 1
+
+        # objects
+        for o in data['objects']:
+            o_id = o['id']
+
+            xpos = o['x'] / 10.
+            ypos = o['y'] / 10.
+
+            dist = math.sqrt(xpos ** 2 + ypos ** 2)
+            va = o['va'] / 10.
+            vx = o['vx'] / 10.
+            vy = o['vy'] / 10.
+            orientation = o['a']
+
+            if first_frame:
+                src_nodes.append(o_id)
+                dst_nodes.append(room_id)
+                edge_types.append(rels.index('o_r'))
+                edge_norms.append([1.])
+
+                src_nodes.append(room_id)
+                dst_nodes.append(o_id)
+                edge_types.append(rels.index('r_o'))
+                edge_norms.append([1.])
+                # Edge features
+                edge_features = th.zeros(num_rels + 4)
+                edge_features[rels.index('o_r')] = 1
+                edge_features[-1] = dist
+                edge_feats_list.append(edge_features)
+
+                edge_features = th.zeros(num_rels + 4)
+                edge_features[rels.index('r_o')] = 1
+                edge_features[-1] = dist
+                edge_feats_list.append(edge_features)
+
+                typeMap[o_id] = 'o'  # 'o' for 'object'
+                position_by_id[o_id] = [xpos, ypos]
+                features[o_id, all_features.index('object')] = 1
+
+            max_used_id += 1
+
+            features[o_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
+            features[o_id, all_features.index('obj_orientation_sin' + t_tag[n_instants])] = math.sin(orientation)
+            features[o_id, all_features.index('obj_orientation_cos' + t_tag[n_instants])] = math.cos(orientation)
+            features[o_id, all_features.index('obj_x_pos' + t_tag[n_instants])] = xpos
+            features[o_id, all_features.index('obj_y_pos' + t_tag[n_instants])] = ypos
+            features[o_id, all_features.index('obj_a_vel' + t_tag[n_instants])] = va
+            features[o_id, all_features.index('obj_x_vel' + t_tag[n_instants])] = vx
+            features[o_id, all_features.index('obj_y_vel' + t_tag[n_instants])] = vy
+            features[o_id, all_features.index('obj_x_size' + t_tag[n_instants])] = o['size_x']
+            features[o_id, all_features.index('obj_y_size' + t_tag[n_instants])] = o['size_y']
+            features[o_id, all_features.index('obj_dist' + t_tag[n_instants])] = dist
+            features[o_id, all_features.index('obj_inv_dist' + t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
+
+        # humans
+        for h in data['people']:
+            h_id = h['id']
+
+            xpos = h['x'] / 10.
+            ypos = h['y'] / 10.
+            dist = math.sqrt(xpos ** 2 + ypos ** 2)
+            va = h['va'] / 10.
+            vx = h['vx'] / 10.
+            vy = h['vy'] / 10.
+            orientation = h['a']
+
+            if first_frame:
+                src_nodes.append(h_id)
+                dst_nodes.append(room_id)
+                edge_types.append(rels.index('p_r'))
+                edge_norms.append([1. / len(data['people'])])
+
+                src_nodes.append(room_id)
+                dst_nodes.append(h_id)
+                edge_types.append(rels.index('r_p'))
+                edge_norms.append([1.])
+
+                # Edge features
+                edge_features = th.zeros(num_rels + 4)
+                edge_features[rels.index('p_r')] = 1
+                edge_features[-1] = dist
+                edge_feats_list.append(edge_features)
+
+                edge_features = th.zeros(num_rels + 4)
+                edge_features[rels.index('r_p')] = 1
+                edge_features[-1] = dist
+                edge_feats_list.append(edge_features)
+
+                typeMap[h_id] = 'p'  # 'p' for 'person'
+                position_by_id[h_id] = [xpos, ypos]
+                features[h_id, all_features.index('human')] = 1.
+
+            max_used_id += 1
+
+            features[h_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
+            features[h_id, all_features.index('hum_orientation_sin' + t_tag[n_instants])] = math.sin(orientation)
+            features[h_id, all_features.index('hum_orientation_cos' + t_tag[n_instants])] = math.cos(orientation)
+            features[h_id, all_features.index('hum_x_pos' + t_tag[n_instants])] = xpos
+            features[h_id, all_features.index('hum_y_pos' + t_tag[n_instants])] = ypos
+            features[h_id, all_features.index('human_a_vel' + t_tag[n_instants])] = va
+            features[h_id, all_features.index('human_x_vel' + t_tag[n_instants])] = vx
+            features[h_id, all_features.index('human_y_vel' + t_tag[n_instants])] = vy
+            features[h_id, all_features.index('hum_dist' + t_tag[n_instants])] = dist
+            features[h_id, all_features.index('hum_inv_dist' + t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
+            features[h_id, all_features.index('t' + str(n_instants))] = 1.
+
+        # Goal
+        goal_id = max_used_id
+        max_used_id += 1
+
+        xpos = data['goal'][0]['x'] / 10.
+        ypos = data['goal'][0]['y'] / 10.
+        dist = math.sqrt(xpos ** 2 + ypos ** 2)
+
+        if first_frame:
+            typeMap[goal_id] = 't'  # 't' for 'goal'
+            src_nodes.append(goal_id)
+            dst_nodes.append(room_id)
+            edge_types.append(rels.index('t_r'))
+            edge_norms.append([1.])
+            # edge_norms.append([1. / len(data['objects'])])
+
+            src_nodes.append(room_id)
+            dst_nodes.append(goal_id)
+            edge_types.append(rels.index('r_t'))
+            edge_norms.append([1.])
+
+            # Edge features
+            edge_features = th.zeros(num_rels + 4)
+            edge_features[rels.index('t_r')] = 1
+            edge_features[-1] = dist
+            edge_feats_list.append(edge_features)
+
+            edge_features = th.zeros(num_rels + 4)
+            edge_features[rels.index('r_t')] = 1
+            edge_features[-1] = dist
+            edge_feats_list.append(edge_features)
+
+            position_by_id[goal_id] = [xpos, ypos]
+
+            features[goal_id, all_features.index('goal')] = 1
+
+        features[goal_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
+        features[goal_id, all_features.index('goal_x_pos' + t_tag[n_instants])] = xpos
+        features[goal_id, all_features.index('goal_y_pos' + t_tag[n_instants])] = ypos
+        features[goal_id, all_features.index('goal_dist' + t_tag[n_instants])] = dist
+        features[goal_id, all_features.index('goal_inv_dist' + t_tag[n_instants])] = 1. - dist  # /(1.+dist*10.)
+        features[goal_id, all_features.index('t' + str(n_instants))] = 1.
+
+        # Walls
+        if not first_frame:
+            walls, w_segments = generate_walls_information(data, w_segments)
+
+        for wall in walls:
+            wall_id = max_used_id
+            max_used_id += 1
+
+            if first_frame:
+                typeMap[wall_id] = 'w'  # 'w' for 'walls'
+
+                dist = math.sqrt((wall.xpos / 1000.) ** 2 + (wall.ypos / 1000.) ** 2)
+
+                # Links to room node
+                src_nodes.append(wall_id)
+                dst_nodes.append(room_id)
+                edge_types.append(rels.index('w_r'))
+                edge_norms.append([1. / len(walls)])
+
+                src_nodes.append(room_id)
+                dst_nodes.append(wall_id)
+                edge_types.append(rels.index('r_w'))
+                edge_norms.append([1.])
+
+                # Edge features
+                edge_features = th.zeros(num_rels + 4)
+                edge_features[rels.index('w_r')] = 1
+                edge_features[-1] = dist
+                edge_feats_list.append(edge_features)
+
+                edge_features = th.zeros(num_rels + 4)
+                edge_features[rels.index('r_w')] = 1
+                edge_features[-1] = dist
+                edge_feats_list.append(edge_features)
+
+                position_by_id[wall_id] = [wall.xpos / 1000., wall.ypos / 1000.]
+                features[wall_id, all_features.index('wall')] = 1.
+
+            features[wall_id, all_features.index('step_fraction' + t_tag[n_instants])] = step_fraction
+            features[wall_id, all_features.index('wall_orientation_sin' + t_tag[n_instants])] = math.sin(
+                wall.orientation)
+            features[wall_id, all_features.index('wall_orientation_cos' + t_tag[n_instants])] = math.cos(
+                wall.orientation)
+            features[wall_id, all_features.index('wall_x_pos' + t_tag[n_instants])] = wall.xpos / 1000.
+            features[wall_id, all_features.index('wall_y_pos' + t_tag[n_instants])] = wall.ypos / 1000.
+            features[wall_id, all_features.index('wall_dist' + t_tag[n_instants])] = dist
+            features[wall_id, all_features.index('wall_inv_dist' + t_tag[n_instants])] = 1. - dist  # 1./(1.+dist*10.)
+            features[wall_id, all_features.index('t' + str(n_instants))] = 1.
+
+        n_instants += 1
+        first_frame = False
+
+    # interaction links
+    for link in data['interaction']:
+        typeLdir = typeMap[link['src']] + '_' + typeMap[link['dst']]
+        typeLinv = typeMap[link['dst']] + '_' + typeMap[link['src']]
+
+        dist = math.sqrt((position_by_id[link['src']][0] - position_by_id[link['dst']][0]) ** 2 +
+                         (position_by_id[link['src']][1] - position_by_id[link['dst']][1]) ** 2)
+
+        src_nodes.append(link['src'])
+        dst_nodes.append(link['dst'])
+        edge_types.append(rels.index(typeLdir))
+        edge_norms.append([1.])
+
+        src_nodes.append(link['dst'])
+        dst_nodes.append(link['src'])
+        edge_types.append(rels.index(typeLinv))
+        edge_norms.append([1.])
+
+        # Edge features
+        edge_features = th.zeros(num_rels + 4)
+        edge_features[rels.index(typeLdir)] = 1
+        edge_features[-1] = dist
+        edge_feats_list.append(edge_features)
+
+        edge_features = th.zeros(num_rels + 4)
+        edge_features[rels.index(typeLinv)] = 1
+        edge_features[-1] = dist
+        edge_feats_list.append(edge_features)
+
+    # self edges
+    for node_id in range(n_nodes):
+        src_nodes.append(node_id)
+        dst_nodes.append(node_id)
+        edge_types.append(rels.index('self'))
+        edge_norms.append([1.])
+
+        # Edge features
+        edge_features = th.zeros(num_rels + 4)
+        edge_features[rels.index('self')] = 1
+        edge_features[-1] = 0
+        edge_feats_list.append(edge_features)
+
+    # Convert outputs to tensors
+    src_nodes = th.LongTensor(src_nodes)
+    dst_nodes = th.LongTensor(dst_nodes)
+
+    edge_types = th.LongTensor(edge_types)
+    edge_norms = th.Tensor(edge_norms)
+
+    edge_feats = th.stack(edge_feats_list)
+
+    return src_nodes, dst_nodes, n_nodes, features, edge_feats, edge_types, edge_norms, position_by_id, typeMap, \
+           labels, []
+
+
+def initializeAlt9(data_sequence, alt='9', w_segments=[]):
+    # Initialize variables
+    rels, num_rels = get_relations(alt)
+    edge_types = []  # List to store the relation of each edge
+    edge_norms = []  # List to store the norm of each edge
+
+    # Compute the number of nodes
+    # one for the robot  + humans  + one for the goal
+    n_nodes = 1 + len(data_sequence[0]['people']) + len(data_sequence[0]['objects']) + 1
+
     walls, w_segments, wall_index = generate_walls_information(data_sequence[0], w_segments)
     n_nodes += len(walls)
 
