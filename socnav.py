@@ -101,7 +101,10 @@ class SocNavDataset(DGLDataset):
             # Link each node in the room graph to the correspondent grid graph.
             for r_n_id in range(0, room_graph_data.n_nodes):
                 r_n_type = room_graph_data.typeMap[r_n_id]
-                x, y, _ = room_graph_data.position_by_id[r_n_id]
+                if self.alt == '9':
+                    x, y, _ = room_graph_data.position_by_id[r_n_id]
+                else:
+                    x, y = room_graph_data.position_by_id[r_n_id]
                 grid_distance = area_width / grid_width
                 closest_grid_nodes_id = closest_grid_nodes(self.grid_data.labels, area_width, grid_width, area_width, x * 10000, y * 10000)
                 # closest_grid_nodes_id = [closest_grid_node(self.grid_data.labels,area_width, grid_width, x * 10000, y * 10000)]
