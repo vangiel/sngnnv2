@@ -365,22 +365,25 @@ def get_features(alt):
 
 
 def get_edge_features(alt):
-    # Define features
-    relative_position = ['x', 'y', 'orientation']
-    time_to_collision = ['t_collision']
-    all_features_1_instant = relative_position + time_to_collision
-    all_features = copy.deepcopy(all_features_1_instant)
+    if alt == '9':
+        # Define features
+        relative_position = ['x', 'y', 'orientation']
+        time_to_collision = ['t_collision']
+        all_features_1_instant = relative_position + time_to_collision
+        all_features = copy.deepcopy(all_features_1_instant)
 
-    # One hot time features
-    time_features = ["t0"]
-    for i in range(1, N_INTERVALS):
-        all_features += [f + '_t' + str(i) for f in all_features_1_instant]
-        time_features.append('t' + str(i))
+        # One hot time features
+        time_features = ["t0"]
+        for i in range(1, N_INTERVALS):
+            all_features += [f + '_t' + str(i) for f in all_features_1_instant]
+            time_features.append('t' + str(i))
 
-    rels, _ = get_relations(alt)
-    edge_types_one_hot = ['wandering_human_interacting', 'two_static_person_talking', 'human_laptop_interaction',
-                          'human_plant_interaction']
-    all_features += time_features + rels + edge_types_one_hot + ['delta_x', 'delta_y']
+        rels, _ = get_relations(alt)
+        edge_types_one_hot = ['wandering_human_interacting', 'two_static_person_talking', 'human_laptop_interaction',
+                              'human_plant_interaction']
+        all_features += time_features + rels + edge_types_one_hot + ['delta_x', 'delta_y']
+    else:
+        all_features, _ = get_relations(alt)
     n_features = len(all_features)
 
     return all_features, n_features
@@ -433,8 +436,9 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_ri')] = 1
-                edge_features[all_edge_features.index('delta_x')] = 1.
-                edge_features[all_edge_features.index('delta_y')] = 0.
+                if alt == '9':
+                    edge_features[all_edge_features.index('delta_x')] = 1.
+                    edge_features[all_edge_features.index('delta_y')] = 0.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and y > 0:
@@ -444,8 +448,9 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_uri')] = 1
-                    edge_features[all_edge_features.index('delta_x')] = 1.
-                    edge_features[all_edge_features.index('delta_y')] = 1.
+                    if alt == '9':
+                        edge_features[all_edge_features.index('delta_x')] = 1.
+                        edge_features[all_edge_features.index('delta_y')] = 1.
                     edge_feats_list.append(edge_features)
 
             if x > 0:
@@ -455,8 +460,9 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_le')] = 1
-                edge_features[all_edge_features.index('delta_x')] = -1.
-                edge_features[all_edge_features.index('delta_y')] = 0.
+                if alt == '9':
+                    edge_features[all_edge_features.index('delta_x')] = -1.
+                    edge_features[all_edge_features.index('delta_y')] = 0.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and y < grid_width - 1:
@@ -466,8 +472,9 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_dle')] = 1
-                    edge_features[all_edge_features.index('delta_x')] = -1.
-                    edge_features[all_edge_features.index('delta_y')] = -1.
+                    if alt == '9':
+                        edge_features[all_edge_features.index('delta_x')] = -1.
+                        edge_features[all_edge_features.index('delta_y')] = -1.
                     edge_feats_list.append(edge_features)
 
             if y < grid_width - 1:
@@ -477,8 +484,9 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_d')] = 1
-                edge_features[all_edge_features.index('delta_x')] = 0.
-                edge_features[all_edge_features.index('delta_y')] = -1.
+                if alt == '9':
+                    edge_features[all_edge_features.index('delta_x')] = 0.
+                    edge_features[all_edge_features.index('delta_y')] = -1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and x < grid_width - 1:
@@ -488,8 +496,9 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_dri')] = 1
-                    edge_features[all_edge_features.index('delta_x')] = 1.
-                    edge_features[all_edge_features.index('delta_y')] = -1.
+                    if alt == '9':
+                        edge_features[all_edge_features.index('delta_x')] = 1.
+                        edge_features[all_edge_features.index('delta_y')] = -1.
                     edge_feats_list.append(edge_features)
 
             if y > 0:
@@ -499,8 +508,9 @@ def generate_grid_graph_data(alt='2'):
                 edge_norms.append([1.])
                 edge_features = th.zeros(n_edge_features)
                 edge_features[all_edge_features.index('g_u')] = 1
-                edge_features[all_edge_features.index('delta_x')] = 0.
-                edge_features[all_edge_features.index('delta_y')] = 1.
+                if alt == '9':
+                    edge_features[all_edge_features.index('delta_x')] = 0.
+                    edge_features[all_edge_features.index('delta_y')] = 1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and x > 0:
@@ -510,8 +520,9 @@ def generate_grid_graph_data(alt='2'):
                     edge_norms.append([1.])
                     edge_features = th.zeros(n_edge_features)
                     edge_features[all_edge_features.index('g_ule')] = 1
-                    edge_features[all_edge_features.index('delta_x')] = -1.
-                    edge_features[all_edge_features.index('delta_y')] = 1.
+                    if alt == '9':
+                        edge_features[all_edge_features.index('delta_x')] = -1.
+                        edge_features[all_edge_features.index('delta_y')] = 1.
                     edge_feats_list.append(edge_features)
 
             typeMap[node_id] = 'g'  # 'g' for 'grid'
