@@ -1,6 +1,6 @@
 import sys
 
-from utils_alternatives import *
+from alternatives_utils import *
 
 
 #################################################################
@@ -1363,7 +1363,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
     # one for the robot  + humans  + one for the goal
     n_nodes = 1 + len(data_sequence[0]['people']) + len(data_sequence[0]['objects']) + 1
 
-    walls, w_segments = generate_walls_information(data_sequence[0], w_segments)
+    walls, w_segments, _ = generate_walls_information(data_sequence[0], w_segments)
     n_nodes += len(walls)
 
     # Feature dimensions
@@ -1578,7 +1578,7 @@ def initializeAlt8(data_sequence, alt='8', w_segments=[]):
 
         # Walls
         if not first_frame:
-            walls, w_segments = generate_walls_information(data, w_segments)
+            walls, w_segments, _ = generate_walls_information(data, w_segments)
 
         for wall in walls:
             wall_id = max_used_id
