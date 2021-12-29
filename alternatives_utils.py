@@ -382,9 +382,11 @@ def get_edge_features(alt):
         edge_types_one_hot = ['wandering_human_interacting', 'two_static_person_talking', 'human_laptop_interaction',
                               'human_plant_interaction']
         all_features += time_features + rels + edge_types_one_hot + ['delta_x', 'delta_y']
+        n_features = len(all_features)
     else:
-        all_features, _ = get_relations(alt)
-    n_features = len(all_features)
+        all_features, num_rels = get_relations(alt)
+        n_features = num_rels + 4
+
 
     return all_features, n_features
 
