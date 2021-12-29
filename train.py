@@ -13,7 +13,7 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import mean_squared_error
 import socnav
 
-from select_gnn import SELECT_GNN
+from select_gnn_training import SELECT_GNN
 
 if torch.cuda.is_available() is True:
     device = torch.device('cuda')

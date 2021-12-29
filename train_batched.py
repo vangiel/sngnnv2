@@ -30,7 +30,7 @@ from torch.utils.data import DataLoader
 from sklearn.metrics import mean_absolute_error
 from sklearn.metrics import mean_squared_error
 
-from select_gnn import SELECT_GNN
+from select_gnn_training import SELECT_GNN
 import socnav
 
 import random
