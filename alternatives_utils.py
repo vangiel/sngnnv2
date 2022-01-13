@@ -429,6 +429,8 @@ def generate_grid_graph_data(alt='2'):
             edge_norms.append([1.])
             edge_features = th.zeros(n_edge_features)
             edge_features[all_edge_features.index('g_c')] = 1
+            if alt != '9':
+                edge_features[-1] = 0
             edge_feats_list.append(edge_features)
 
             if x < grid_width - 1:
@@ -441,6 +443,8 @@ def generate_grid_graph_data(alt='2'):
                 if alt == '9':
                     edge_features[all_edge_features.index('delta_x')] = 1.
                     edge_features[all_edge_features.index('delta_y')] = 0.
+                else:
+                    edge_features[-1] = 1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and y > 0:
@@ -453,6 +457,8 @@ def generate_grid_graph_data(alt='2'):
                     if alt == '9':
                         edge_features[all_edge_features.index('delta_x')] = 1.
                         edge_features[all_edge_features.index('delta_y')] = 1.
+                    else:
+                        edge_features[-1] = math.sqrt(2.)
                     edge_feats_list.append(edge_features)
 
             if x > 0:
@@ -465,6 +471,8 @@ def generate_grid_graph_data(alt='2'):
                 if alt == '9':
                     edge_features[all_edge_features.index('delta_x')] = -1.
                     edge_features[all_edge_features.index('delta_y')] = 0.
+                else:
+                    edge_features[-1] = 1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and y < grid_width - 1:
@@ -477,6 +485,8 @@ def generate_grid_graph_data(alt='2'):
                     if alt == '9':
                         edge_features[all_edge_features.index('delta_x')] = -1.
                         edge_features[all_edge_features.index('delta_y')] = -1.
+                    else:
+                        edge_features[-1] = math.sqrt(2.)
                     edge_feats_list.append(edge_features)
 
             if y < grid_width - 1:
@@ -489,6 +499,8 @@ def generate_grid_graph_data(alt='2'):
                 if alt == '9':
                     edge_features[all_edge_features.index('delta_x')] = 0.
                     edge_features[all_edge_features.index('delta_y')] = -1.
+                else:
+                    edge_features[-1] = 1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and x < grid_width - 1:
@@ -501,6 +513,8 @@ def generate_grid_graph_data(alt='2'):
                     if alt == '9':
                         edge_features[all_edge_features.index('delta_x')] = 1.
                         edge_features[all_edge_features.index('delta_y')] = -1.
+                    else:
+                        edge_features[-1] = math.sqrt(2.)
                     edge_feats_list.append(edge_features)
 
             if y > 0:
@@ -513,6 +527,8 @@ def generate_grid_graph_data(alt='2'):
                 if alt == '9':
                     edge_features[all_edge_features.index('delta_x')] = 0.
                     edge_features[all_edge_features.index('delta_y')] = 1.
+                else:
+                    edge_features[-1] = 1.
                 edge_feats_list.append(edge_features)
 
                 if connectivity == 8 and x > 0:
@@ -525,6 +541,8 @@ def generate_grid_graph_data(alt='2'):
                     if alt == '9':
                         edge_features[all_edge_features.index('delta_x')] = -1.
                         edge_features[all_edge_features.index('delta_y')] = 1.
+                    else:
+                        edge_features[-1] = math.sqrt(2.)
                     edge_feats_list.append(edge_features)
 
             typeMap[node_id] = 'g'  # 'g' for 'grid'
