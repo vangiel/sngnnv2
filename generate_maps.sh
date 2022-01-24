@@ -26,17 +26,19 @@ mkdir -p images_dataset/
 
 for f in $FILES
 do
-  echo "Processing $f"
-  COUNTER=$[$(cat $TEMPFILE) + 1]
-  echo $COUNTER > $TEMPFILE
+  if test -f "$f"; then
+    echo "Processing $f"
+    COUNTER=$[$(cat $TEMPFILE) + 1]
+    echo $COUNTER > $TEMPFILE
 
-  python3 showcase_static.py "best_model" "$f" 150 &
-  cp "$f" images_dataset/
+    python3 showcase_static.py "best_model" "$f" 150 &
+    cp "$f" images_dataset/
 
-  if [ $COUNTER -eq 2 ]
-  then
-    echo 0 > $TEMPFILE
-    wait
+    if [ $COUNTER -eq 2 ]
+    then
+      echo 0 > $TEMPFILE
+      wait
+    fi
   fi
 
 done
