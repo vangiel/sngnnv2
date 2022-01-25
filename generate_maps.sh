@@ -26,7 +26,7 @@ mkdir -p images_dataset/
 
 for f in $FILES
 do
-  if [ ! -f "$f" ]; then
+  if [ ! -f "images_dataset/${f}" ]; then
     echo "Processing $f"
     COUNTER=$[$(cat $TEMPFILE) + 1]
     echo $COUNTER > $TEMPFILE
